@@ -1,0 +1,42 @@
+{
+  "FY22": {
+    "peak": 203,
+    "peakYoY": "+6.6% YoY",
+    "energy": 1374,
+    "energyYoY": "+8.2% YoY",
+    "deficit": "0.4%",
+    "debt": "₹5.0 L cr"
+  },
+  "FY23": {
+    "peak": 216,
+    "peakYoY": "+6.4% YoY",
+    "energy": 1504,
+    "energyYoY": "+9.5% YoY",
+    "deficit": "0.5%",
+    "debt": "₹5.4 L cr"
+  },
+  "FY24": {
+    "peak": 243,
+    "peakYoY": "+12.5% YoY",
+    "energy": 1626,
+    "energyYoY": "+8.1% YoY",
+    "deficit": "0.3%",
+    "debt": "₹5.8 L cr"
+  },
+  "FY25": {
+    "peak": 250,
+    "peakYoY": "+2.9% YoY",
+    "energy": 1694,
+    "energyYoY": "+4.2% YoY",
+    "deficit": "0.1%",
+    "debt": "₹6.0 L cr"
+  },
+  "FY26": {
+    "peak": 250,
+    "peakYoY": "≈ flat YoY",
+    "energy": 1840,
+    "energyYoY": "+8.6% YoY",
+    "deficit": "0.2%",
+    "debt": "₹6.2 L cr"
+  }
+}

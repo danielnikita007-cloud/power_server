@@ -1,0 +1,181 @@
+{
+  "waterfall": {
+    "labels": [
+      "Cost to supply 1 unit",
+      "Unbilled energy",
+      "Uncollected bills",
+      "Delayed subsidy",
+      "Actually realised"
+    ],
+    "steps": [
+      7.65,
+      -0.92,
+      -0.51,
+      -0.37
+    ]
+  },
+  "collections": {
+    "years": [
+      "FY22",
+      "FY23",
+      "FY24",
+      "FY25",
+      "FY26"
+    ],
+    "series": {
+      "Industrial": [
+        92,
+        93,
+        94,
+        95.5,
+        96
+      ],
+      "Commercial": [
+        88,
+        90,
+        91,
+        92.5,
+        93
+      ],
+      "Residential": [
+        82,
+        85,
+        88,
+        90,
+        91
+      ],
+      "Agriculture": [
+        65,
+        68,
+        72,
+        76,
+        78
+      ]
+    },
+    "norm": 95
+  },
+  "spend": [
+    {
+      "u": "Gujarat (GUVNL)",
+      "v": 1
+    },
+    {
+      "u": "Bihar (N/SBPDCL)",
+      "v": 0.95
+    },
+    {
+      "u": "Tamil Nadu (TANGEDCO)",
+      "v": 0.8
+    },
+    {
+      "u": "Maharashtra (MSEDCL)",
+      "v": 0.71
+    },
+    {
+      "u": "West Bengal (WBSEDCL)",
+      "v": 0.55
+    },
+    {
+      "u": "Odisha (TP discoms)",
+      "v": 0.5
+    },
+    {
+      "u": "Rajasthan discoms",
+      "v": 0.4
+    },
+    {
+      "u": "MP discoms",
+      "v": 0.35
+    },
+    {
+      "u": "Uttar Pradesh (UPPCL)",
+      "v": 0.12
+    },
+    {
+      "u": "Punjab (PSPCL)",
+      "v": -0.27
+    }
+  ],
+  "priorities": [
+    {
+      "r": 1,
+      "name": "Smart metering surge",
+      "sub": "UP · Punjab · Jharkhand",
+      "effort": [
+        "Medium",
+        50,
+        "#A4670B"
+      ],
+      "impact": [
+        "Highest",
+        95,
+        "#D14848"
+      ],
+      "out": "4–5 pt AT&C cut in laggard states"
+    },
+    {
+      "r": 2,
+      "name": "Feeder & DT metering completion",
+      "sub": "Worst 20% of circles first",
+      "effort": [
+        "Medium",
+        50,
+        "#A4670B"
+      ],
+      "impact": [
+        "High",
+        78,
+        "#D14848"
+      ],
+      "out": "Energy accounting pinpoints theft pockets"
+    },
+    {
+      "r": 3,
+      "name": "Agriculture collection reform",
+      "sub": "No new capital required",
+      "effort": [
+        "Low",
+        25,
+        "#0E9678"
+      ],
+      "impact": [
+        "Medium-high",
+        65,
+        "#A4670B"
+      ],
+      "out": "78% → 92% farm collection · ₹1,200 Cr/yr"
+    },
+    {
+      "r": 4,
+      "name": "Ring-fence loss-reduction capex",
+      "sub": "Vs. diversion to new connections",
+      "effort": [
+        "Low",
+        25,
+        "#0E9678"
+      ],
+      "impact": [
+        "Medium",
+        50,
+        "#A4670B"
+      ],
+      "out": "Protects Priority 1 & 2 spend"
+    },
+    {
+      "r": 5,
+      "name": "Quarterly subsidy discipline",
+      "sub": "Needs state finance dept. sign-off",
+      "effort": [
+        "Medium-high",
+        65,
+        "#D14848"
+      ],
+      "impact": [
+        "Medium",
+        50,
+        "#A4670B"
+      ],
+      "out": "Keeps ₹0.06 gap from reopening"
+    }
+  ]
+}

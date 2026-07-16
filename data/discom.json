@@ -1,0 +1,377 @@
+{
+  "atc": {
+    "FY21": 22.3,
+    "FY22": 16.4,
+    "FY23": 15.4,
+    "FY24": 16,
+    "FY25": 15,
+    "FY26": 14.3
+  },
+  "atcTarget": {
+    "FY21": 21,
+    "FY22": 18.9,
+    "FY23": 16.8,
+    "FY24": 15.6,
+    "FY25": 14.5,
+    "FY26": 13.5
+  },
+  "gap": {
+    "FY21": 0.69,
+    "FY22": 0.4,
+    "FY23": 0.45,
+    "FY24": 0.35,
+    "FY25": 0.06,
+    "FY26": 0.05
+  },
+  "atcDelta": {
+    "FY22": "−5.9 pp YoY",
+    "FY23": "−1.0 pp YoY",
+    "FY24": "−0.6 pp YoY",
+    "FY25": "−0.6 pp YoY",
+    "FY26": "−0.6 pp YoY"
+  },
+  "subsidyTimely": {
+    "FY22": "62%",
+    "FY23": "71%",
+    "FY24": "78%",
+    "FY25": "83%",
+    "FY26": "87%"
+  },
+  "smartMetersCr": {
+    "FY22": "0.3 cr",
+    "FY23": "0.7 cr",
+    "FY24": "1.2 cr",
+    "FY25": "2.2 cr",
+    "FY26": "4.4 cr"
+  },
+  "regions": {
+    "all": {
+      "name": "All India",
+      "atc": {
+        "FY21": 22.3,
+        "FY22": 16.4,
+        "FY23": 15.4,
+        "FY24": 16,
+        "FY25": 15,
+        "FY26": 14.3
+      },
+      "gap": {
+        "FY21": 0.69,
+        "FY22": 0.4,
+        "FY23": 0.45,
+        "FY24": 0.35,
+        "FY25": 0.06,
+        "FY26": 0.05
+      },
+      "subsidy": {
+        "FY22": "62%",
+        "FY23": "71%",
+        "FY24": "78%",
+        "FY25": "83%",
+        "FY26": "87%"
+      }
+    },
+    "North": {
+      "name": "Northern Region",
+      "atc": {
+        "FY21": 24.6,
+        "FY22": 19.2,
+        "FY23": 18.1,
+        "FY24": 17.9,
+        "FY25": 16.9,
+        "FY26": 16.1
+      },
+      "gap": {
+        "FY21": 0.92,
+        "FY22": 0.58,
+        "FY23": 0.61,
+        "FY24": 0.49,
+        "FY25": 0.4,
+        "FY26": 0.31
+      },
+      "subsidy": {
+        "FY22": "55%",
+        "FY23": "64%",
+        "FY24": "72%",
+        "FY25": "78%",
+        "FY26": "82%"
+      }
+    },
+    "West": {
+      "name": "Western Region",
+      "atc": {
+        "FY21": 18.4,
+        "FY22": 14.9,
+        "FY23": 14.1,
+        "FY24": 13.6,
+        "FY25": 13,
+        "FY26": 12.4
+      },
+      "gap": {
+        "FY21": 0.55,
+        "FY22": 0.31,
+        "FY23": 0.33,
+        "FY24": 0.26,
+        "FY25": 0.2,
+        "FY26": 0.13
+      },
+      "subsidy": {
+        "FY22": "70%",
+        "FY23": "78%",
+        "FY24": "84%",
+        "FY25": "89%",
+        "FY26": "92%"
+      }
+    },
+    "South": {
+      "name": "Southern Region",
+      "atc": {
+        "FY21": 16.2,
+        "FY22": 12.8,
+        "FY23": 12.3,
+        "FY24": 11.9,
+        "FY25": 11.5,
+        "FY26": 11.1
+      },
+      "gap": {
+        "FY21": 0.74,
+        "FY22": 0.45,
+        "FY23": 0.52,
+        "FY24": 0.41,
+        "FY25": 0.33,
+        "FY26": 0.26
+      },
+      "subsidy": {
+        "FY22": "66%",
+        "FY23": "73%",
+        "FY24": "80%",
+        "FY25": "85%",
+        "FY26": "88%"
+      }
+    },
+    "East": {
+      "name": "Eastern Region",
+      "atc": {
+        "FY21": 30.5,
+        "FY22": 25.9,
+        "FY23": 24.6,
+        "FY24": 22.8,
+        "FY25": 19.8,
+        "FY26": 18.7
+      },
+      "gap": {
+        "FY21": 0.88,
+        "FY22": 0.6,
+        "FY23": 0.66,
+        "FY24": 0.55,
+        "FY25": 0.3,
+        "FY26": 0.24
+      },
+      "subsidy": {
+        "FY22": "48%",
+        "FY23": "58%",
+        "FY24": "66%",
+        "FY25": "73%",
+        "FY26": "79%"
+      }
+    },
+    "NE": {
+      "name": "North-East Region",
+      "atc": {
+        "FY21": 28.9,
+        "FY22": 24.1,
+        "FY23": 22.5,
+        "FY24": 20.8,
+        "FY25": 19.2,
+        "FY26": 17.8
+      },
+      "gap": {
+        "FY21": 0.81,
+        "FY22": 0.57,
+        "FY23": 0.59,
+        "FY24": 0.5,
+        "FY25": 0.43,
+        "FY26": 0.36
+      },
+      "subsidy": {
+        "FY22": "41%",
+        "FY23": "50%",
+        "FY24": "59%",
+        "FY25": "68%",
+        "FY26": "75%"
+      }
+    }
+  },
+  "states": [
+    {
+      "st": "Gujarat",
+      "rg": "West",
+      "atc": 9.8,
+      "gap": 0.05,
+      "sm": 38
+    },
+    {
+      "st": "Delhi",
+      "rg": "North",
+      "atc": 8.1,
+      "gap": 0.1,
+      "sm": 52
+    },
+    {
+      "st": "Kerala",
+      "rg": "South",
+      "atc": 8.9,
+      "gap": 0.12,
+      "sm": 14
+    },
+    {
+      "st": "Punjab",
+      "rg": "North",
+      "atc": 19.2,
+      "gap": 0.35,
+      "sm": 0
+    },
+    {
+      "st": "Tamil Nadu",
+      "rg": "South",
+      "atc": 11.2,
+      "gap": 0.55,
+      "sm": 17
+    },
+    {
+      "st": "Andhra Pradesh",
+      "rg": "South",
+      "atc": 11.5,
+      "gap": 0.47,
+      "sm": 29
+    },
+    {
+      "st": "Haryana",
+      "rg": "North",
+      "atc": 11.9,
+      "gap": 0.15,
+      "sm": 26
+    },
+    {
+      "st": "Karnataka",
+      "rg": "South",
+      "atc": 12.4,
+      "gap": 0.21,
+      "sm": 19
+    },
+    {
+      "st": "Telangana",
+      "rg": "South",
+      "atc": 12.9,
+      "gap": 0.38,
+      "sm": 16
+    },
+    {
+      "st": "Maharashtra",
+      "rg": "West",
+      "atc": 13.5,
+      "gap": 0.3,
+      "sm": 23
+    },
+    {
+      "st": "Rajasthan",
+      "rg": "North",
+      "atc": 15.2,
+      "gap": 0.28,
+      "sm": 35
+    },
+    {
+      "st": "Assam",
+      "rg": "NE",
+      "atc": 17.8,
+      "gap": 0.36,
+      "sm": 44
+    },
+    {
+      "st": "Madhya Pradesh",
+      "rg": "West",
+      "atc": 18.1,
+      "gap": 0.41,
+      "sm": 27
+    },
+    {
+      "st": "West Bengal",
+      "rg": "East",
+      "atc": 18.9,
+      "gap": 0.24,
+      "sm": 11
+    },
+    {
+      "st": "Odisha",
+      "rg": "East",
+      "atc": 21.5,
+      "gap": 0.14,
+      "sm": 15
+    },
+    {
+      "st": "Uttar Pradesh",
+      "rg": "North",
+      "atc": 22.8,
+      "gap": 0.62,
+      "sm": 24
+    },
+    {
+      "st": "Bihar",
+      "rg": "East",
+      "atc": 15.5,
+      "gap": 0.3,
+      "sm": 68
+    },
+    {
+      "st": "Jharkhand",
+      "rg": "East",
+      "atc": 30.2,
+      "gap": 0.98,
+      "sm": 12
+    },
+    {
+      "st": "Jammu & Kashmir",
+      "rg": "North",
+      "atc": 40.5,
+      "gap": 1.6,
+      "sm": 9
+    }
+  ],
+  "rdss": [
+    {
+      "name": "Prepaid Smart Consumer Meters (RDSS)",
+      "unit": "crore",
+      "done": 4.4,
+      "target": 22.23,
+      "color": "var(--amber)"
+    },
+    {
+      "name": "DT (Distribution Transformer) Metering",
+      "unit": "lakh",
+      "done": 21.4,
+      "target": 52.5,
+      "color": "var(--sky)"
+    },
+    {
+      "name": "Feeder Metering & Segregation",
+      "unit": "thousand feeders",
+      "done": 142,
+      "target": 186,
+      "color": "var(--teal)"
+    },
+    {
+      "name": "Loss-Reduction Infra Works Awarded",
+      "unit": "₹ L cr",
+      "done": 1.18,
+      "target": 1.52,
+      "color": "var(--violet)"
+    },
+    {
+      "name": "States Meeting Tariff-Order Timelines",
+      "unit": "states/UTs",
+      "done": 27,
+      "target": 36,
+      "color": "var(--rose)"
+    }
+  ]
+}

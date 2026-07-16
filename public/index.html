@@ -1,0 +1,1908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bharat Power Grid Monitor — Value Chain Dashboard | Ministry of Power</title>
+
+<!-- ============================================================
+     LIBRARIES (CDN)
+     Tailwind CSS v2 utilities  · Chart.js v4  · Lucide icons
+     ============================================================ -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.294.0/umd/lucide.min.js"></script>
+
+<style>
+/* ============================================================
+   THEME TOKENS — "National Grid Control Room"
+   Deep indigo night-grid base · saffron-amber energy accent
+   teal = renewables/positive · sky = transmission · rose = risk
+   ============================================================ */
+:root{
+  color-scheme: light;
+  --bg:        #F4F7FB;
+  --surface:   #FFFFFF;
+  --surface-2: #EEF2F8;
+  --line:      #DFE6F0;
+  --ink:       #1B2436;
+  --ink-mute:  #5B6880;
+  --ink-faint: #8A96AC;
+  --amber:     #C97E12;   /* energy / generation   */
+  --sky:       #1F72C4;   /* transmission          */
+  --teal:      #0E9678;   /* distribution / good   */
+  --rose:      #D14848;   /* risk / critical       */
+  --violet:    #6D5FD6;
+  --num-font:  'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --body-font: 'IBM Plex Sans', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+html{ scroll-behavior:smooth; }
+body{
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(31,114,196,.07), transparent 60%),
+    radial-gradient(900px 420px at 5% 0%, rgba(201,126,18,.06), transparent 55%),
+    var(--bg);
+  color:var(--ink);
+  font-family:var(--body-font);
+  -webkit-font-smoothing:antialiased;
+}
+.num{ font-family:var(--num-font); font-variant-numeric:tabular-nums; letter-spacing:-0.01em; }
+
+/* ---------- Surfaces & chrome ---------- */
+.card{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:14px;
+  box-shadow:0 1px 2px rgba(27,36,54,.04), 0 8px 24px -18px rgba(27,36,54,.18);
+}
+.card-flat{ background:var(--surface); border:1px solid var(--line); border-radius:14px;
+  box-shadow:0 1px 2px rgba(27,36,54,.04); }
+.divider{ border-color:var(--line); }
+.eyebrow{
+  font-size:.65rem; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--ink-faint); font-weight:600;
+}
+.chip{
+  display:inline-flex; align-items:center; gap:.3rem;
+  font-size:.66rem; font-weight:600; letter-spacing:.04em;
+  padding:.18rem .55rem; border-radius:999px; border:1px solid;
+}
+.chip-good { color:#0A7A61; border-color:rgba(14,150,120,.30); background:rgba(14,150,120,.09); }
+.chip-watch{ color:#A4670B; border-color:rgba(201,126,18,.32); background:rgba(201,126,18,.10); }
+.chip-crit { color:#B23A3A; border-color:rgba(209,72,72,.32);  background:rgba(209,72,72,.09); }
+.chip-info { color:#1A619F; border-color:rgba(31,114,196,.30); background:rgba(31,114,196,.09); }
+
+/* ---------- Top navigation ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:rgba(255,255,255,.86);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);
+}
+.tab-btn{
+  position:relative; display:inline-flex; align-items:center; gap:.45rem;
+  padding:.55rem .95rem; border-radius:10px;
+  font-size:.8rem; font-weight:600; color:var(--ink-mute);
+  transition:color .15s ease, background .15s ease;
+  white-space:nowrap;
+}
+.tab-btn:hover{ color:var(--ink); background:rgba(27,36,54,.05); }
+.tab-btn.active{ color:var(--ink); background:var(--surface-2); box-shadow:inset 0 0 0 1px var(--line); }
+.tab-btn.active .tab-dot{ opacity:1; transform:scale(1); }
+.tab-dot{
+  width:6px; height:6px; border-radius:99px; background:var(--amber);
+  opacity:0; transform:scale(.4); transition:all .2s ease;
+}
+select.ctl, .ctl-btn{
+  background:var(--surface-2); border:1px solid var(--line); color:var(--ink);
+  font-size:.75rem; font-weight:600; border-radius:9px; padding:.4rem .7rem;
+  outline:none;
+}
+select.ctl:focus, .ctl-btn:focus{ box-shadow:0 0 0 2px rgba(201,126,18,.35); }
+
+/* ---------- Views ---------- */
+.view{ display:none; }
+.view.active{ display:block; animation:viewIn .28s ease both; }
+@keyframes viewIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+/* ============================================================
+   SIGNATURE — Value Chain Corridor
+   Three stage blocks joined by conductors carrying animated
+   energy pulses left→right (Genco → Transco → Discom).
+   ============================================================ */
+.vc-stage{
+  cursor:pointer; transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.vc-stage:hover{ transform:translateY(-3px); }
+.vc-stage:focus-visible{ outline:2px solid var(--amber); outline-offset:3px; }
+.vc-stage[data-accent="amber"]:hover{ border-color:rgba(201,126,18,.55); box-shadow:0 10px 28px -14px rgba(201,126,18,.45); }
+.vc-stage[data-accent="sky"]:hover  { border-color:rgba(31,114,196,.55); box-shadow:0 10px 28px -14px rgba(31,114,196,.45); }
+.vc-stage[data-accent="teal"]:hover { border-color:rgba(14,150,120,.55); box-shadow:0 10px 28px -14px rgba(14,150,120,.45); }
+.vc-topline{ height:3px; border-radius:99px 99px 0 0; }
+
+.conductor{ position:relative; height:3px; flex:1 1 3.5rem; min-width:2.5rem;
+  background:linear-gradient(90deg, rgba(201,126,18,.35), rgba(31,114,196,.35));
+  border-radius:99px; overflow:visible;
+}
+.conductor .pulse{
+  position:absolute; top:50%; width:9px; height:9px; border-radius:99px;
+  transform:translate(-50%,-50%);
+  background:var(--amber);
+  box-shadow:0 0 8px 2px rgba(201,126,18,.45);
+  animation:flow 2.6s linear infinite;
+}
+.conductor .pulse.p2{ animation-delay:1.3s; }
+.conductor.c2 .pulse{ background:var(--sky); box-shadow:0 0 8px 2px rgba(31,114,196,.45); }
+@keyframes flow{ 0%{left:-2%; opacity:0;} 8%{opacity:1;} 92%{opacity:1;} 100%{left:102%; opacity:0;} }
+@media (prefers-reduced-motion: reduce){
+  .conductor .pulse{ animation:none; opacity:.7; left:50%; }
+  .view.active{ animation:none; }
+}
+
+/* ---------- KPI cards ---------- */
+.kpi{ position:relative; overflow:hidden; }
+.kpi .kpi-icon{
+  width:38px; height:38px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+}
+.trend-up{ color:var(--teal); }
+.trend-dn{ color:var(--rose); }
+
+/* ---------- Tables ---------- */
+.tbl th{
+  font-size:.63rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-faint); font-weight:700; text-align:left;
+  padding:.6rem .85rem; border-bottom:1px solid var(--line);
+  white-space:nowrap;
+}
+.tbl td{ padding:.6rem .85rem; border-bottom:1px solid rgba(223,230,240,.8); font-size:.8rem; }
+.tbl tbody tr:hover{ background:rgba(27,36,54,.03); }
+.bar-track{ height:6px; border-radius:99px; background:rgba(27,36,54,.08); overflow:hidden; }
+.bar-fill{ height:100%; border-radius:99px; transition:width .6s ease; }
+
+/* ---------- RDSS progress ---------- */
+.rdss-row + .rdss-row{ margin-top:1rem; }
+
+/* ---------- News feed ---------- */
+.news-item{ transition:background .15s ease; border-radius:10px; }
+.news-item:hover{ background:rgba(27,36,54,.035); }
+
+/* ---------- Live sync ---------- */
+.spin{ animation:spin 1s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){ .spin{ animation:none; } }
+
+
+/* ---------- Jargon tooltips ---------- */
+.term{
+  border-bottom:1px dotted rgba(27,36,54,.45);
+  cursor:help; position:relative; white-space:nowrap;
+}
+.term:hover::after, .term:focus::after{
+  content:attr(data-tip);
+  position:absolute; bottom:135%; left:50%; transform:translateX(-50%);
+  background:#1B2436; color:#F2F5FA;
+  padding:.55rem .7rem; border-radius:9px;
+  width:max-content; max-width:250px;
+  font-size:.68rem; font-weight:500; line-height:1.45;
+  text-transform:none; letter-spacing:normal; white-space:normal; text-align:left;
+  box-shadow:0 10px 26px -8px rgba(27,36,54,.45);
+  z-index:70; pointer-events:none;
+}
+.term:hover::before, .term:focus::before{
+  content:''; position:absolute; bottom:calc(135% - 5px); left:50%; transform:translateX(-50%) rotate(45deg);
+  width:10px; height:10px; background:#1B2436; z-index:69; pointer-events:none;
+}
+.term:focus{ outline:none; }
+
+/* ---------- Insight components ---------- */
+.insight-head{ font-size:.95rem; font-weight:600; line-height:1.4; color:var(--ink); }
+.insight-head b{ font-weight:800; }
+.insight-head .hi-crit{ color:var(--rose); font-weight:700; }
+.insight-head .hi-good{ color:var(--teal); font-weight:700; }
+.insight-head .hi-watch{ color:#A4670B; font-weight:700; }
+.h-420{ height:420px; } .h-340{ height:340px; }
+@media (max-width:640px){ .h-420{height:360px;} .h-340{height:280px;} }
+
+.meter{ width:74px; height:6px; border-radius:99px; background:rgba(27,36,54,.08); overflow:hidden; display:inline-block; vertical-align:middle; }
+.meter i{ display:block; height:100%; border-radius:99px; }
+.pr-tbl td{ padding:.7rem .75rem; border-bottom:1px solid rgba(223,230,240,.75); font-size:.8rem; vertical-align:middle; }
+.pr-tbl th{ font-size:.62rem; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint);
+  font-weight:700; text-align:left; padding:.55rem .75rem; border-bottom:1px solid var(--line); }
+.pr-rank{ font-family:var(--num-font); font-size:1.15rem; font-weight:700; color:#A4670B; }
+
+/* ---------- Scrollbars ---------- */
+.scroll-slim::-webkit-scrollbar{ height:8px; width:8px; }
+.scroll-slim::-webkit-scrollbar-thumb{ background:var(--line); border-radius:99px; }
+.scroll-slim::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- Responsive chart boxes ---------- */
+.chart-box{ position:relative; width:100%; }
+.h-260{ height:260px; } .h-300{ height:300px; } .h-220{ height:220px; }
+@media (max-width:640px){ .h-300{height:240px;} .h-260{height:220px;} }
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+     STICKY TOP NAVIGATION
+     ============================================================ -->
+<header class="topbar">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex items-center justify-between py-3 gap-3 flex-wrap">
+      <!-- Identity -->
+      <div class="flex items-center gap-3">
+        <div class="kpi-icon" style="background:rgba(201,126,18,.12); border:1px solid rgba(201,126,18,.30); width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center;">
+          <i data-lucide="zap" class="w-5 h-5" style="color:var(--amber)"></i>
+        </div>
+        <div>
+          <div class="text-sm font-bold tracking-tight leading-tight">Bharat Power Grid Monitor</div>
+          <div class="eyebrow">Genco · Transco · Discom Value Chain</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <nav class="flex items-center gap-1 overflow-x-auto scroll-slim" aria-label="Dashboard views">
+        <button class="tab-btn active" data-view="overview"><span class="tab-dot"></span><i data-lucide="layout-dashboard" class="w-4 h-4"></i>Overview</button>
+        <button class="tab-btn" data-view="genco"><span class="tab-dot"></span><i data-lucide="factory" class="w-4 h-4"></i>Genco</button>
+        <button class="tab-btn" data-view="transco"><span class="tab-dot"></span><i data-lucide="utility-pole" class="w-4 h-4"></i>Transco</button>
+        <button class="tab-btn" data-view="discom"><span class="tab-dot"></span><i data-lucide="plug-zap" class="w-4 h-4"></i>Discom &amp; RDSS</button>
+        <button class="tab-btn" data-view="insights"><span class="tab-dot"></span><i data-lucide="lightbulb" class="w-4 h-4"></i>Challenges</button>
+      </nav>
+
+      <!-- Global controls -->
+      <div class="flex items-center gap-2">
+        <span class="chip chip-info" id="fySnapshotChip" style="display:none"><i data-lucide="camera" class="w-3 h-3"></i> Snapshot view · FY25 audited + FY26 provisional</span>
+        <div id="fyCtl" class="flex items-center gap-2">
+        <label class="eyebrow hidden sm:block" for="fySelect">Fiscal Year</label>
+        <select id="fySelect" class="ctl" aria-label="Select fiscal year">
+          <option value="FY22">FY 2021-22</option>
+          <option value="FY23">FY 2022-23</option>
+          <option value="FY24">FY 2023-24</option>
+          <option value="FY25">FY 2024-25</option>
+          <option value="FY26" selected>FY 2025-26</option>
+        </select>
+        </div>
+        <button id="liveSyncBtn" class="ctl-btn flex items-center gap-1.5" title="Fetch the latest official figures via AI web search">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span id="liveSyncLabel">Sync live data</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+<!-- ============================================================
+     VIEW 1 — OVERVIEW / EXECUTIVE SUMMARY
+     ============================================================ -->
+<section id="view-overview" class="view active" aria-label="Executive overview">
+
+  <!-- Briefing line -->
+  <div class="flex items-end justify-between flex-wrap gap-2 mb-4">
+    <div>
+      <div class="eyebrow mb-1">Executive Summary · <span id="ovFyLabel">FY 2025-26</span></div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight">National Power Value Chain — Health at a Glance</h1>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="chip chip-good" id="liveStamp" style="display:none"></span>
+      <div class="chip chip-info"><i data-lucide="shield-check" class="w-3 h-3"></i> Data: CEA · MoP · PFC · RDSS — trued to official releases up to H1 2026</div>
+    </div>
+  </div>
+
+  <!-- ── SIGNATURE: Value Chain Corridor ─────────────────────── -->
+  <div class="card p-4 sm:p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="eyebrow">Electricity Value Chain · Click a stage to drill down</div>
+      <div class="hidden sm:flex items-center gap-2 text-xs" style="color:var(--ink-faint)">
+        <span class="inline-block w-2 h-2 rounded-full" style="background:var(--amber)"></span> energy flow
+      </div>
+    </div>
+
+    <div class="flex items-stretch gap-0 flex-col md:flex-row md:items-center">
+
+      <!-- Stage 1: Generation -->
+      <button class="vc-stage card-flat flex-1 text-left p-0 overflow-hidden" data-accent="amber" data-goto="genco" aria-label="Open Genco analysis">
+        <div class="vc-topline" style="background:var(--amber)"></div>
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="factory" class="w-4 h-4" style="color:var(--amber)"></i>
+              <span class="text-sm font-bold">Generation · Gencos</span>
+            </div>
+            <i data-lucide="arrow-up-right" class="w-4 h-4" style="color:var(--ink-faint)"></i>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div><div class="num text-lg font-semibold" id="vcCap">485</div><div class="text-xs" style="color:var(--ink-mute)">GW installed</div></div>
+            <div><div class="num text-lg font-semibold" id="vcPlf">70.1%</div><div class="text-xs" style="color:var(--ink-mute)">coal PLF</div></div>
+            <div><div class="num text-lg font-semibold" style="color:var(--teal)" id="vcRe">47.4%</div><div class="text-xs" style="color:var(--ink-mute)">non-fossil</div></div>
+          </div>
+        </div>
+      </button>
+
+      <!-- Conductor 1 -->
+      <div class="hidden md:flex items-center px-1"><div class="conductor"><span class="pulse"></span><span class="pulse p2"></span></div></div>
+      <div class="md:hidden flex justify-center py-1"><i data-lucide="arrow-down" class="w-4 h-4" style="color:var(--ink-faint)"></i></div>
+
+      <!-- Stage 2: Transmission -->
+      <button class="vc-stage card-flat flex-1 text-left p-0 overflow-hidden" data-accent="sky" data-goto="transco" aria-label="Open Transco analysis">
+        <div class="vc-topline" style="background:var(--sky)"></div>
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="utility-pole" class="w-4 h-4" style="color:var(--sky)"></i>
+              <span class="text-sm font-bold">Transmission · Transcos</span>
+            </div>
+            <i data-lucide="arrow-up-right" class="w-4 h-4" style="color:var(--ink-faint)"></i>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div><div class="num text-lg font-semibold" id="vcCkm">5.08L</div><div class="text-xs" style="color:var(--ink-mute)">ckm lines</div></div>
+            <div><div class="num text-lg font-semibold" id="vcMva">14.0L</div><div class="text-xs" style="color:var(--ink-mute)">MVA capacity</div></div>
+            <div><div class="num text-lg font-semibold" style="color:var(--teal)" id="vcAvail">99.83%</div><div class="text-xs" style="color:var(--ink-mute)">availability</div></div>
+          </div>
+        </div>
+      </button>
+
+      <!-- Conductor 2 -->
+      <div class="hidden md:flex items-center px-1"><div class="conductor c2"><span class="pulse"></span><span class="pulse p2"></span></div></div>
+      <div class="md:hidden flex justify-center py-1"><i data-lucide="arrow-down" class="w-4 h-4" style="color:var(--ink-faint)"></i></div>
+
+      <!-- Stage 3: Distribution -->
+      <button class="vc-stage card-flat flex-1 text-left p-0 overflow-hidden" data-accent="teal" data-goto="discom" aria-label="Open Discom analysis">
+        <div class="vc-topline" style="background:var(--teal)"></div>
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <i data-lucide="plug-zap" class="w-4 h-4" style="color:var(--teal)"></i>
+              <span class="text-sm font-bold">Distribution · Discoms</span>
+            </div>
+            <i data-lucide="arrow-up-right" class="w-4 h-4" style="color:var(--ink-faint)"></i>
+          </div>
+          <div class="grid grid-cols-3 gap-2">
+            <div><div class="num text-lg font-semibold" id="vcAtc">13.6%</div><div class="text-xs" style="color:var(--ink-mute)">AT&amp;C loss</div></div>
+            <div><div class="num text-lg font-semibold" id="vcGap">₹0.19</div><div class="text-xs" style="color:var(--ink-mute)">ACS-ARR /kWh</div></div>
+            <div><div class="num text-lg font-semibold" style="color:var(--amber)" id="vcSm">4.6 cr</div><div class="text-xs" style="color:var(--ink-mute)">smart meters</div></div>
+          </div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- National KPI strip -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Peak Demand Met</div>
+          <div class="num text-2xl font-bold" id="kNatPeak">250 GW</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="kNatPeakD">+4.2% YoY</span></div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(201,126,18,.10)"><i data-lucide="gauge" class="w-5 h-5" style="color:var(--amber)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Energy Supplied</div>
+          <div class="num text-2xl font-bold" id="kNatEnergy">1,780 BU</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="kNatEnergyD">+5.1% YoY</span></div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(31,114,196,.10)"><i data-lucide="activity" class="w-5 h-5" style="color:var(--sky)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Energy Deficit</div>
+          <div class="num text-2xl font-bold" id="kNatDeficit">0.2%</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-down" class="w-3 h-3"></i>improving</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(14,150,120,.10)"><i data-lucide="battery-charging" class="w-5 h-5" style="color:var(--teal)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Discom Debt Overhang</div>
+          <div class="num text-2xl font-bold" id="kNatDebt">₹6.2 L cr</div>
+          <div class="text-xs mt-1 trend-dn flex items-center gap-1"><i data-lucide="alert-triangle" class="w-3 h-3"></i>legacy debt · FY25 PAT +₹2,701 cr</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(209,72,72,.10)"><i data-lucide="landmark" class="w-5 h-5" style="color:var(--rose)"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts + News -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <!-- Capacity mix -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Generation</div>
+          <div class="text-sm font-bold">Installed Capacity Mix</div>
+        </div>
+        <i data-lucide="pie-chart" class="w-4 h-4" style="color:var(--ink-faint)"></i>
+      </div>
+      <div class="chart-box h-260"><canvas id="ovMixChart" role="img" aria-label="Installed capacity mix doughnut chart"></canvas></div>
+    </div>
+
+    <!-- AT&C national trend -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Distribution</div>
+          <div class="text-sm font-bold">National AT&amp;C Loss Trajectory</div>
+        </div>
+        <span class="chip chip-good">RDSS glide-path</span>
+      </div>
+      <div class="chart-box h-260"><canvas id="ovAtcChart" role="img" aria-label="National AT and C loss trend line chart"></canvas></div>
+    </div>
+
+    <!-- Policy & Market Intelligence -->
+    <div class="card p-4 lg:row-span-1">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <div class="eyebrow">External Factors</div>
+          <div class="text-sm font-bold">Policy &amp; Market Intelligence</div>
+        </div>
+        <i data-lucide="rss" class="w-4 h-4" style="color:var(--ink-faint)"></i>
+      </div>
+      <div id="newsFeed" class="space-y-1 overflow-y-auto scroll-slim" style="max-height:262px"></div>
+    </div>
+  </div>
+
+  <!-- Data provenance & status -->
+  <div class="card p-4 mt-4">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <div>
+        <div class="eyebrow">Transparency</div>
+        <div class="text-sm font-bold">Data Provenance &amp; Publication Status</div>
+      </div>
+      <span class="chip chip-info"><i data-lucide="file-check" class="w-3 h-3"></i> audited FY25 · provisional FY26</span>
+    </div>
+    <div class="overflow-x-auto scroll-slim">
+      <table class="tbl w-full">
+        <thead><tr><th>Metric group</th><th>Primary source</th><th>FY 2025-26 status</th></tr></thead>
+        <tbody>
+          <tr><td class="font-semibold">Installed capacity &amp; fuel mix</td><td>CEA monthly Installed Capacity report · National Power Portal (npp.gov.in)</td><td><span class="chip chip-good">Published (Mar 2026)</span></td></tr>
+          <tr><td class="font-semibold">Generation, PLF &amp; energy supplied</td><td>CEA monthly generation / Load Generation Balance reports</td><td><span class="chip chip-good">Provisional actuals published</span></td></tr>
+          <tr><td class="font-semibold">Peak demand met</td><td>Grid-India (grid-india.in) · Vidyut PRAVAH</td><td><span class="chip chip-good">Published (daily/monthly)</span></td></tr>
+          <tr><td class="font-semibold">Transmission ckm, MVA, inter-regional capacity</td><td>CEA · MoP · National Electricity Plan (Transmission)</td><td><span class="chip chip-good">Published (Jan–Mar 2026)</span></td></tr>
+          <tr><td class="font-semibold">Grid availability</td><td>POWERGRID annual report · CERC filings</td><td><span class="chip chip-watch">FY26 figure representative</span></td></tr>
+          <tr><td class="font-semibold">AT&amp;C losses, ACS-ARR gap, discom financials</td><td>PFC Report on Performance of Power Utilities · MoP Integrated Ratings</td><td><span class="chip chip-watch">Latest audited: FY25 · FY26 = projection</span></td></tr>
+          <tr><td class="font-semibold">Smart meters &amp; RDSS progress</td><td>RDSS portal (rdss.powermin.gov.in) · NSGM · REC monitoring</td><td><span class="chip chip-good">Updated monthly (shown as of Q4 FY26)</span></td></tr>
+          <tr><td class="font-semibold">Regional aggregates, player portfolios &amp; Challenges-tab analytics</td><td>Modelled from state/utility-level disclosures</td><td><span class="chip chip-crit">Illustrative — replace before official use</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="text-xs mt-3" style="color:var(--ink-mute)">
+      PFC's audited discom report for a fiscal year typically publishes 12–18 months after year-end; the FY26 edition is expected in 2027. Until then, FY26 distribution-finance figures here extrapolate the FY25 trend. Use the Sync Live Data button, or point CUSTOM_FEED_URL at an internal NIC feed, to refresh headline metrics.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     VIEW 2 — GENCO ANALYSIS
+     ============================================================ -->
+<section id="view-genco" class="view" aria-label="Generation analysis">
+  <div class="flex items-end justify-between flex-wrap gap-2 mb-4">
+    <div>
+      <div class="eyebrow mb-1">Segment Deep-Dive · <span class="gcFyLabel">FY 2025-26</span></div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight" style="color:var(--amber)">Generation — Gencos</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <label class="eyebrow" for="gcFuelFilter">Fuel view</label>
+      <select id="gcFuelFilter" class="ctl">
+        <option value="all" selected>All sources</option>
+        <option value="fossil">Fossil only</option>
+        <option value="clean">Non-fossil only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Total Installed Capacity</div>
+          <div class="num text-3xl font-bold" id="gcKpiCap">485 GW</div>
+          <div class="text-xs mt-1" style="color:var(--ink-mute)" id="gcKpiCapSub">CEA outlook: 1,121 GW by FY 2035-36</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(201,126,18,.10)"><i data-lucide="factory" class="w-5 h-5" style="color:var(--amber)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Coal Fleet PLF</div>
+          <div class="num text-3xl font-bold" id="gcKpiPlf">70.1%</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="gcKpiPlfD">+0.6 pp YoY</span></div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(31,114,196,.10)"><i data-lucide="gauge" class="w-5 h-5" style="color:var(--sky)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Non-Fossil Capacity Share</div>
+          <div class="num text-3xl font-bold" style="color:var(--teal)" id="gcKpiRe">47.4%</div>
+          <div class="text-xs mt-1" style="color:var(--ink-mute)">COP commitment: 50% by 2030</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(14,150,120,.10)"><i data-lucide="leaf" class="w-5 h-5" style="color:var(--teal)"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <!-- Source mix -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Capacity by Source · <span class="gcFyLabel">FY 2025-26</span></div>
+          <div class="text-sm font-bold">Fuel Mix Breakdown (GW)</div>
+        </div>
+        <i data-lucide="pie-chart" class="w-4 h-4" style="color:var(--ink-faint)"></i>
+      </div>
+      <div class="chart-box h-300"><canvas id="gcMixChart" role="img" aria-label="Fuel mix doughnut chart"></canvas></div>
+    </div>
+
+    <!-- Player breakdown -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Key Players · Installed GW</div>
+          <div class="text-sm font-bold">Ownership &amp; Portfolio Composition</div>
+        </div>
+        <span class="chip chip-info">stacked by fuel</span>
+      </div>
+      <div class="chart-box h-300"><canvas id="gcPlayerChart" role="img" aria-label="Player-wise capacity stacked bar chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- PLF trend -->
+  <div class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <div>
+        <div class="eyebrow">Fleet Performance</div>
+        <div class="text-sm font-bold">Plant Load Factor Trend — Coal vs Gas vs Hydro CUF</div>
+      </div>
+      <div class="text-xs" style="color:var(--ink-mute)">Higher coal PLF reflects demand growth outpacing thermal additions</div>
+    </div>
+    <div class="chart-box h-300"><canvas id="gcPlfChart" role="img" aria-label="PLF trend line chart"></canvas></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     VIEW 3 — TRANSCO ANALYSIS
+     ============================================================ -->
+<section id="view-transco" class="view" aria-label="Transmission analysis">
+  <div class="flex items-end justify-between flex-wrap gap-2 mb-4">
+    <div>
+      <div class="eyebrow mb-1">Segment Deep-Dive · <span class="trFyLabel">FY 2025-26</span></div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight" style="color:var(--sky)">Transmission — Transcos</h1>
+    </div>
+    <div class="chip chip-info"><i data-lucide="git-branch" class="w-3 h-3"></i> One Nation · One Grid · One Frequency</div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Transmission Lines (≥220 kV)</div>
+          <div class="num text-3xl font-bold" id="trKpiCkm">5.08 L ckm</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="trKpiCkmD">+13,100 ckm added YoY</span></div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(31,114,196,.10)"><i data-lucide="cable" class="w-5 h-5" style="color:var(--sky)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Transformation Capacity</div>
+          <div class="num text-3xl font-bold" id="trKpiMva">14.0 L MVA</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-up" class="w-3 h-3"></i><span id="trKpiMvaD">+6.1% YoY</span></div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(109,95,214,.10)"><i data-lucide="box" class="w-5 h-5" style="color:var(--violet)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Grid Availability (POWERGRID)</div>
+          <div class="num text-3xl font-bold" style="color:var(--teal)" id="trKpiAvail">99.83%</div>
+          <div class="text-xs mt-1" style="color:var(--ink-mute)">Norm: ≥ 99.50% system availability</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(14,150,120,.10)"><i data-lucide="shield-check" class="w-5 h-5" style="color:var(--teal)"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <!-- Availability trend -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Grid Stability</div>
+          <div class="text-sm font-bold">System Availability vs 99.5% Norm</div>
+        </div>
+        <span class="chip chip-good">above norm</span>
+      </div>
+      <div class="chart-box h-300"><canvas id="trAvailChart" role="img" aria-label="System availability trend line chart"></canvas></div>
+    </div>
+
+    <!-- Inter-regional capacity -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">National Grid Integration</div>
+          <div class="text-sm font-bold">Inter-Regional Transfer Capacity (GW)</div>
+        </div>
+        <span class="chip chip-watch">target 168 GW · FY32</span>
+      </div>
+      <div class="chart-box h-300"><canvas id="trInterChart" role="img" aria-label="Inter-regional transfer capacity bar chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Network growth -->
+  <div class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <div>
+        <div class="eyebrow">Network Expansion</div>
+        <div class="text-sm font-bold">Line Length (ckm) &amp; Transformation Capacity (MVA) Build-Out</div>
+      </div>
+      <div class="text-xs" style="color:var(--ink-mute)">Green Energy Corridors + NEP transmission plan (₹9.15 L cr to 2032)</div>
+    </div>
+    <div class="chart-box h-300"><canvas id="trGrowthChart" role="img" aria-label="Network growth dual axis chart"></canvas></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     VIEW 4 — DISCOM & RDSS ANALYSIS
+     ============================================================ -->
+<section id="view-discom" class="view" aria-label="Distribution and RDSS analysis">
+  <div class="flex items-end justify-between flex-wrap gap-2 mb-4">
+    <div>
+      <div class="eyebrow mb-1">Segment Deep-Dive · <span class="dcFyLabel">FY 2025-26</span></div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight" style="color:var(--teal)">Distribution — Discoms &amp; RDSS</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="chip chip-watch" id="dcProvChip" style="display:none"><i data-lucide="clock" class="w-3 h-3"></i> FY26 = projection · audited data ends FY25</span>
+      <label class="eyebrow" for="dcRegionFilter">Region</label>
+      <select id="dcRegionFilter" class="ctl">
+        <option value="all" selected>All India</option>
+        <option value="North">Northern</option>
+        <option value="West">Western</option>
+        <option value="South">Southern</option>
+        <option value="East">Eastern</option>
+        <option value="NE">North-East</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">AT&amp;C Losses · <span class="dcRegionName">All India</span></div>
+          <div class="num text-3xl font-bold" id="dcKpiAtc">13.6%</div>
+          <div class="text-xs mt-1 trend-up flex items-center gap-1"><i data-lucide="trending-down" class="w-3 h-3"></i><span id="dcKpiAtcD">−0.6 pp YoY · RDSS target 12–15%</span></div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(14,150,120,.10)"><i data-lucide="percent" class="w-5 h-5" style="color:var(--teal)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">ACS-ARR Gap · <span class="dcRegionName">All India</span></div>
+          <div class="num text-3xl font-bold" id="dcKpiGap">₹0.19 /kWh</div>
+          <div class="text-xs mt-1" style="color:var(--ink-mute)">RDSS endpoint: zero gap</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(201,126,18,.10)"><i data-lucide="indian-rupee" class="w-5 h-5" style="color:var(--amber)"></i></div>
+      </div>
+    </div>
+    <div class="card kpi p-4">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="eyebrow mb-1">Subsidy Disbursal Timeliness · <span class="dcRegionName">All India</span></div>
+          <div class="num text-3xl font-bold" id="dcKpiSub">87%</div>
+          <div class="text-xs mt-1" style="color:var(--ink-mute)">states paying within the quarter (grant precondition)</div>
+        </div>
+        <div class="kpi-icon" style="background:rgba(31,114,196,.10)"><i data-lucide="calendar-check" class="w-5 h-5" style="color:var(--sky)"></i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <!-- AT&C trend -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Loss Reduction · <span class="dcRegionName">All India</span></div>
+          <div class="text-sm font-bold">AT&amp;C Losses vs RDSS Glide-Path</div>
+        </div>
+        <span class="chip chip-good">on track</span>
+      </div>
+      <div class="chart-box h-300"><canvas id="dcAtcChart" role="img" aria-label="AT and C loss versus target line chart"></canvas></div>
+    </div>
+
+    <!-- ACS-ARR gap -->
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Financial Viability · <span class="dcRegionName">All India</span></div>
+          <div class="text-sm font-bold">ACS-ARR Gap Narrowing (₹/kWh)</div>
+        </div>
+        <span class="chip chip-watch">tariff true-up dependent</span>
+      </div>
+      <div class="chart-box h-300"><canvas id="dcGapChart" role="img" aria-label="ACS ARR gap bar chart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+    <!-- State health table -->
+    <div class="card p-4 lg:col-span-3">
+      <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div>
+          <div class="eyebrow">Comparative View</div>
+          <div class="text-sm font-bold">State Discom Health Scorecard</div>
+        </div>
+        <button id="dcSortBtn" class="ctl-btn flex items-center gap-1 text-xs">
+          <i data-lucide="arrow-down-up" class="w-3 h-3"></i> Sort by AT&amp;C
+        </button>
+      </div>
+      <div class="overflow-x-auto scroll-slim">
+        <table class="tbl w-full" id="dcStateTable">
+          <thead>
+            <tr>
+              <th>State</th><th>Region</th><th>AT&amp;C Loss</th>
+              <th>ACS-ARR Gap</th><th>Smart Meter %</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="dcStateBody"><!-- rows injected by JS --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RDSS tracker -->
+    <div class="card p-4 lg:col-span-2">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <div class="eyebrow">Revamped Distribution Sector Scheme</div>
+          <div class="text-sm font-bold">RDSS Progress Tracker</div>
+        </div>
+        <span class="chip chip-info">₹3.03 L cr outlay</span>
+      </div>
+      <div id="rdssTracker"><!-- progress rows injected by JS --></div>
+      <div class="mt-4 pt-3 border-t divider text-xs" style="color:var(--ink-mute)">
+        <i data-lucide="info" class="w-3 h-3 inline"></i>
+        Fund release is results-linked: states must meet loss-reduction and gap trajectories to unlock tranches.
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     VIEW 5 — CHALLENGES & PRIORITIES (decision-support insights)
+     ============================================================ -->
+<section id="view-insights" class="view" aria-label="Challenges and priorities">
+  <div class="flex items-end justify-between flex-wrap gap-2 mb-4">
+    <div>
+      <div class="eyebrow mb-1">Decision Support · FY25 audited + FY26 provisional</div>
+      <h1 class="text-xl sm:text-2xl font-bold tracking-tight" style="color:#A4670B">Challenges &amp; Priorities — Where Attention Is Needed</h1>
+    </div>
+    <div class="chip chip-watch"><i data-lucide="target" class="w-3 h-3"></i> Findings framed for action, not just reporting</div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    <!-- A · State loss concentration (banded) -->
+    <div class="card p-4 lg:col-span-2">
+      <div class="eyebrow mb-1">Loss Concentration · latest state AT&amp;C</div>
+      <p class="insight-head mb-3" id="insStatesHead"></p>
+      <div class="chart-box h-420"><canvas id="inStatesChart" role="img" aria-label="State AT and C losses banded bar chart"></canvas></div>
+      <div class="flex items-center gap-2 mt-3 flex-wrap">
+        <span class="chip chip-crit">Critical &gt; 25%</span>
+        <span class="chip chip-watch">At-risk 15–25%</span>
+        <span class="chip chip-good">Compliant &lt; 15% (RDSS band)</span>
+      </div>
+    </div>
+
+    <!-- B · Rupee journey waterfall -->
+    <div class="card p-4">
+      <div class="eyebrow mb-1">The Rupee Journey · stressed cohort (AT&amp;C &gt; 20%)</div>
+      <p class="insight-head mb-3">To supply one unit, discoms in the <b>four most stressed states</b> spend <b>₹7.65</b> but realise <b>₹5.85</b> — a <span class="hi-crit">₹1.80 gap</span> persists even as the national gap closes to <span class="hi-good">₹0.06</span></p>
+      <div class="chart-box h-340"><canvas id="inWaterfallChart" role="img" aria-label="ACS to ARR waterfall chart"></canvas></div>
+      <div class="text-xs mt-2" style="color:var(--ink-faint)">Cohort: J&amp;K · Jharkhand · Uttar Pradesh · Odisha. Bars decompose where the rupee leaks.</div>
+    </div>
+
+    <!-- D · Collections by consumer category -->
+    <div class="card p-4">
+      <div class="eyebrow mb-1">Collection Efficiency · by consumer category</div>
+      <p class="insight-head mb-3">Industrial collection already clears the norm at <span class="hi-good">96%</span>; <b>agriculture remains the national laggard</b> at <span class="hi-crit">78%</span></p>
+      <div class="chart-box h-340"><canvas id="inCollectChart" role="img" aria-label="Collection efficiency by category line chart"></canvas></div>
+      <div class="text-xs mt-2" style="color:var(--ink-faint)">Dashed line: 95% collection norm assumed in RDSS trajectories.</div>
+    </div>
+
+    <!-- C · Smart meter coverage (current position, no quarterly breakdown) -->
+    <div class="card p-4 lg:col-span-2">
+      <div class="eyebrow mb-1">Smart Meter Rollout · current % of sanctioned meters installed</div>
+      <p class="insight-head mb-3" id="inMeterHead"></p>
+      <div id="inMeterList" class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2"></div>
+      <div class="text-xs mt-3 flex items-center gap-1.5" style="color:#A4670B"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> Meter-install counts alone can overstate progress where billing-system hookup lags physical installation.</div>
+    </div>
+
+    <!-- E · Spend efficiency -->
+    <div class="card p-4">
+      <div class="eyebrow mb-1">Reform Efficiency · AT&amp;C points cut per ₹100 cr RDSS spend</div>
+      <p class="insight-head mb-3"><b>Gujarat and Bihar</b> cut ~1 point per ₹100 crore spent; <b>Punjab's losses rose</b> <span class="hi-crit">despite sanctioned funds</span> sitting unused</p>
+      <div class="chart-box h-340"><canvas id="inSpendChart" role="img" aria-label="Loss reduction per rupee spent bar chart"></canvas></div>
+    </div>
+
+    <!-- F · Priority sequencing -->
+    <div class="card p-4">
+      <div class="eyebrow mb-1">Priority Sequencing · 20% of effort, 80% of result</div>
+      <p class="insight-head mb-3">Five moves, ranked by <b>impact per unit of effort</b>, that close most of the remaining gap</p>
+      <div class="overflow-x-auto scroll-slim">
+        <table class="pr-tbl w-full" id="inPriorityTable">
+          <thead><tr><th>#</th><th>Intervention</th><th>Effort</th><th>Impact</th><th>Projected outcome</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="pt-2 pb-8 text-center text-xs" style="color:var(--ink-faint)">
+  Representative dataset modelled on CEA / Ministry of Power / PFC &amp; RDSS public reporting · For briefing &amp; demonstration purposes
+</footer>
+</main>
+
+<script>
+/* ==================================================================
+   SECTION 1 — DATASET
+   Representative figures modelled on CEA, MoP, PFC Discom reports,
+   Grid-India and RDSS portal disclosures. Keyed by fiscal year.
+   ================================================================== */
+const FY_LIST   = ['FY22','FY23','FY24','FY25','FY26'];
+const FY_LABELS = { FY22:'FY 2021-22', FY23:'FY 2022-23', FY24:'FY 2023-24', FY25:'FY 2024-25', FY26:'FY 2025-26' };
+
+const DATA = {
+  /* ---- National headline metrics ---- */
+  national: {
+    FY22:{ peak:203, peakYoY:'+6.6% YoY', energy:1374, energyYoY:'+8.2% YoY', deficit:'0.4%', debt:'₹5.0 L cr' },
+    FY23:{ peak:216, peakYoY:'+6.4% YoY', energy:1504, energyYoY:'+9.5% YoY', deficit:'0.5%', debt:'₹5.4 L cr' },
+    FY24:{ peak:243, peakYoY:'+12.5% YoY', energy:1626, energyYoY:'+8.1% YoY', deficit:'0.3%', debt:'₹5.8 L cr' },
+    FY25:{ peak:250, peakYoY:'+2.9% YoY', energy:1694, energyYoY:'+4.2% YoY', deficit:'0.1%', debt:'₹6.0 L cr' },
+    FY26:{ peak:250, peakYoY:'≈ flat YoY', energy:1840, energyYoY:'+8.6% YoY', deficit:'0.2%', debt:'₹6.2 L cr' }
+  },
+
+  /* ---- Generation ---- */
+  genco: {
+    // Installed capacity by source (GW)
+    sources: ['Coal & Lignite','Gas','Nuclear','Large Hydro','Solar','Wind','Bio & Small Hydro'],
+    sourceColors: ['#6B7A94','#7C6FE0','#D14848','#2B7FD0','#E0940F','#0FA37F','#5E9E4D'],
+    mix: {
+      FY22:[210.7, 24.9, 6.8, 46.7,  53.9, 40.4, 15.6],
+      FY23:[211.9, 24.8, 6.8, 46.9,  66.8, 42.6, 15.9],
+      FY24:[217.6, 25.0, 7.5, 46.9,  81.8, 45.9, 16.3],
+      FY25:[220.4, 25.7, 8.8, 47.9, 105.7, 50.0, 16.7],
+      FY26:[226.0, 25.8, 9.5, 49.1, 149.0, 55.6, 17.7]
+    },
+    coalPlf:   { FY22:58.9, FY23:64.2, FY24:68.4, FY25:69.5, FY26:70.1 },
+    plfDelta:  { FY22:'+5.4 pp YoY', FY23:'+5.3 pp YoY', FY24:'+4.2 pp YoY', FY25:'+1.1 pp YoY', FY26:'+0.6 pp YoY' },
+    // PLF / CUF trend series (for the performance chart)
+    plfSeries: {
+      coal:  [58.9, 64.2, 68.4, 69.5, 70.1],
+      gas:   [23.2, 22.1, 14.8, 16.5, 18.2],
+      hydro: [38.5, 41.2, 36.9, 39.4, 40.6]
+    },
+    // Key player portfolios (GW) — stacked by fuel bucket
+    players: ['NTPC Group','State Gencos','Adani (Power+Green)','Tata Power','JSW Energy','Other IPPs & CPPs'],
+    playerStack: {
+      thermal:[ 63.9, 118.4, 17.6,  8.9,  3.5, 43.0 ],
+      hydro:  [  3.8,  27.2,  0.0,  0.9,  1.4, 14.0 ],
+      re:     [  7.4,   9.1, 15.5,  6.9,  7.7, 78.6 ]
+    }
+  },
+
+  /* ---- Transmission ---- */
+  transco: {
+    ckmLakh:  { FY22:4.57, FY23:4.71, FY24:4.85, FY25:4.92, FY26:5.05 },  // ≥220 kV, lakh ckm
+    ckmDelta: { FY22:'+11,700 ckm YoY', FY23:'+14,600 ckm YoY', FY24:'+14,200 ckm YoY', FY25:'+10,900 ckm YoY', FY26:'+13,100 ckm YoY' },
+    mvaLakh:  { FY22:11.05, FY23:11.63, FY24:12.42, FY25:13.20, FY26:14.07 },
+    mvaDelta: { FY22:'+5.6% YoY', FY23:'+5.2% YoY', FY24:'+6.8% YoY', FY25:'+6.3% YoY', FY26:'+6.1% YoY' },
+    availability: { FY22:99.71, FY23:99.75, FY24:99.78, FY25:99.81, FY26:99.83 },
+    interRegional:{ FY22:112.3, FY23:112.3, FY24:116.5, FY25:118.7, FY26:120.2, target:168.0 }
+  },
+
+  /* ---- Distribution ---- */
+  discom: {
+    atc:       { FY21:22.3, FY22:16.4, FY23:15.4, FY24:16.0, FY25:15.0, FY26:14.3 },
+    atcTarget: { FY21:21.0, FY22:18.9, FY23:16.8, FY24:15.6, FY25:14.5, FY26:13.5 },   // RDSS glide-path
+    gap:       { FY21:0.69, FY22:0.40, FY23:0.45, FY24:0.35, FY25:0.06, FY26:0.05 },   // ₹/kWh
+    atcDelta:  { FY22:'−5.9 pp YoY', FY23:'−1.0 pp YoY', FY24:'−0.6 pp YoY', FY25:'−0.6 pp YoY', FY26:'−0.6 pp YoY' },
+    subsidyTimely: { FY22:'62%', FY23:'71%', FY24:'78%', FY25:'83%', FY26:'87%' },
+    smartMetersCr: { FY22:'0.3 cr', FY23:'0.7 cr', FY24:'1.2 cr', FY25:'2.2 cr', FY26:'4.4 cr' },
+
+    /* Regional series — drive the Discom KPIs & charts when a region is selected */
+    regions: {
+      all:   { name:'All India',
+               atc:{FY21:22.3,FY22:16.4,FY23:15.4,FY24:16.0,FY25:15.0,FY26:14.3},
+               gap:{FY21:0.69,FY22:0.40,FY23:0.45,FY24:0.35,FY25:0.06,FY26:0.05},
+               subsidy:{FY22:'62%',FY23:'71%',FY24:'78%',FY25:'83%',FY26:'87%'} },
+      North: { name:'Northern Region',
+               atc:{FY21:24.6,FY22:19.2,FY23:18.1,FY24:17.9,FY25:16.9,FY26:16.1},
+               gap:{FY21:0.92,FY22:0.58,FY23:0.61,FY24:0.49,FY25:0.40,FY26:0.31},
+               subsidy:{FY22:'55%',FY23:'64%',FY24:'72%',FY25:'78%',FY26:'82%'} },
+      West:  { name:'Western Region',
+               atc:{FY21:18.4,FY22:14.9,FY23:14.1,FY24:13.6,FY25:13.0,FY26:12.4},
+               gap:{FY21:0.55,FY22:0.31,FY23:0.33,FY24:0.26,FY25:0.20,FY26:0.13},
+               subsidy:{FY22:'70%',FY23:'78%',FY24:'84%',FY25:'89%',FY26:'92%'} },
+      South: { name:'Southern Region',
+               atc:{FY21:16.2,FY22:12.8,FY23:12.3,FY24:11.9,FY25:11.5,FY26:11.1},
+               gap:{FY21:0.74,FY22:0.45,FY23:0.52,FY24:0.41,FY25:0.33,FY26:0.26},
+               subsidy:{FY22:'66%',FY23:'73%',FY24:'80%',FY25:'85%',FY26:'88%'} },
+      East:  { name:'Eastern Region',
+               atc:{FY21:30.5,FY22:25.9,FY23:24.6,FY24:22.8,FY25:19.8,FY26:18.7},
+               gap:{FY21:0.88,FY22:0.60,FY23:0.66,FY24:0.55,FY25:0.30,FY26:0.24},
+               subsidy:{FY22:'48%',FY23:'58%',FY24:'66%',FY25:'73%',FY26:'79%'} },
+      NE:    { name:'North-East Region',
+               atc:{FY21:28.9,FY22:24.1,FY23:22.5,FY24:20.8,FY25:19.2,FY26:17.8},
+               gap:{FY21:0.81,FY22:0.57,FY23:0.59,FY24:0.50,FY25:0.43,FY26:0.36},
+               subsidy:{FY22:'41%',FY23:'50%',FY24:'59%',FY25:'68%',FY26:'75%'} }
+    },
+
+    // State scorecard (latest year snapshot)
+    states: [
+      { st:'Gujarat',        rg:'West',  atc: 9.8, gap:0.05, sm:38 },
+      { st:'Delhi',          rg:'North', atc: 8.1, gap:0.10, sm:52 },
+      { st:'Kerala',         rg:'South', atc: 8.9, gap:0.12, sm:14 },
+      { st:'Punjab',         rg:'North', atc:19.2, gap:0.35, sm: 0 },
+      { st:'Tamil Nadu',     rg:'South', atc:11.2, gap:0.55, sm:17 },
+      { st:'Andhra Pradesh', rg:'South', atc:11.5, gap:0.47, sm:29 },
+      { st:'Haryana',        rg:'North', atc:11.9, gap:0.15, sm:26 },
+      { st:'Karnataka',      rg:'South', atc:12.4, gap:0.21, sm:19 },
+      { st:'Telangana',      rg:'South', atc:12.9, gap:0.38, sm:16 },
+      { st:'Maharashtra',    rg:'West',  atc:13.5, gap:0.30, sm:23 },
+      { st:'Rajasthan',      rg:'North', atc:15.2, gap:0.28, sm:35 },
+      { st:'Assam',          rg:'NE',    atc:17.8, gap:0.36, sm:44 },
+      { st:'Madhya Pradesh', rg:'West',  atc:18.1, gap:0.41, sm:27 },
+      { st:'West Bengal',    rg:'East',  atc:18.9, gap:0.24, sm:11 },
+      { st:'Odisha',         rg:'East',  atc:21.5, gap:0.14, sm:15 },
+      { st:'Uttar Pradesh',  rg:'North', atc:22.8, gap:0.62, sm:24 },
+      { st:'Bihar',          rg:'East',  atc:15.5, gap:0.30, sm:68 },
+      { st:'Jharkhand',      rg:'East',  atc:30.2, gap:0.98, sm:12 },
+      { st:'Jammu & Kashmir',rg:'North', atc:40.5, gap:1.60, sm: 9 }
+    ],
+
+    // RDSS component progress (achieved vs sanctioned)
+    rdss: [
+      { name:'Prepaid Smart Consumer Meters (RDSS)', unit:'crore', done:4.4,  target:22.23, color:'var(--amber)' },
+      { name:'DT (Distribution Transformer) Metering', unit:'lakh', done:21.4, target:52.5,  color:'var(--sky)' },
+      { name:'Feeder Metering & Segregation', unit:'thousand feeders', done:142,  target:186,  color:'var(--teal)' },
+      { name:'Loss-Reduction Infra Works Awarded', unit:'₹ L cr', done:1.18, target:1.52, color:'var(--violet)' },
+      { name:'States Meeting Tariff-Order Timelines', unit:'states/UTs', done:27, target:36, color:'var(--rose)' }
+    ]
+  },
+
+  /* ---- Policy & market intelligence feed ---- */
+  news: [
+    { t:'Discoms post first collective profit in over a decade — ₹2,701 cr PAT in FY25', tag:'Positive', src:'MoP / PFC · Jan 2026' },
+    { t:'India hits 50% non-fossil installed capacity, meeting its 2030 NDC target four years early', tag:'Positive', src:'MoP / CEA · Mar 2026' },
+    { t:'Record 52.5 GW capacity added in FY26 — highest ever in a single year, ~76% renewables', tag:'Positive', src:'MoP · Mar 2026' },
+    { t:'National grid crosses 5 lakh ckm of transmission lines and 1,407 GVA transformation capacity', tag:'Positive', src:'MoP / NEP · Jan 2026' },
+    { t:'All-time peak demand of 270.8 GW met in May 2026 amid widespread heatwave', tag:'Watch', src:'Grid-India · May 2026' },
+    { t:'Electricity (Amendment) Bill 2026 mandates cost-reflective tariffs; discom credit profiles in focus', tag:'Watch', src:'Parliament · 2026' },
+    { t:'Market coupling of Day-Ahead Market goes live, creating single clearing price across exchanges', tag:'Watch', src:'CERC · Jan 2026' },
+    { t:'Punjab yet to begin RDSS smart-meter rollout; AT&C slips to 19.2% on collection dips', tag:'Critical', src:'RDSS review · FY25' },
+    { t:'Generator dues down 96% — from ₹1.40 L cr (2022) to ₹4,927 cr under Late Payment Surcharge Rules', tag:'Positive', src:'MoP · Jan 2026' }
+  ]
+};
+
+/* ==================================================================
+   SECTION 2 — CHART.JS GLOBAL THEME
+   ================================================================== */
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+/* ---- Library guard -------------------------------------------------
+   If a CDN script fails to load (network block, ad-blocker, offline),
+   show a friendly banner instead of letting the script crash. -------- */
+if (typeof Chart === 'undefined') {
+  const b = document.createElement('div');
+  b.style.cssText = 'margin:1rem auto;max-width:56rem;padding:.8rem 1rem;border:1px solid #E8C9A0;background:#FFF7EC;color:#8A5A10;border-radius:12px;font-size:.85rem;';
+  b.textContent = 'Chart library could not be loaded from the CDN (check network / ad-blocker). KPIs, tables and trackers still work; charts will appear once the page can reach cdnjs.cloudflare.com.';
+  document.querySelector('main').prepend(b);
+  /* No-op stub keeps the rest of the dashboard (KPIs, table, RDSS, news) alive */
+  window.Chart = function(){ return { data:{ labels:[], datasets:[{}] }, update(){}, resize(){} }; };
+  Chart.defaults = { font:{}, plugins:{ legend:{ labels:{} }, tooltip:{} } };
+}
+
+Chart.defaults.color = '#5B6880';
+Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.legend.labels.boxHeight = 10;
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(27,36,54,.95)';
+Chart.defaults.plugins.tooltip.borderColor = 'rgba(27,36,54,.2)';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.titleColor = '#FFFFFF';
+Chart.defaults.plugins.tooltip.bodyColor  = '#DCE4F2';
+Chart.defaults.plugins.tooltip.padding = 10;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+const GRID  = { color:'rgba(27,36,54,.09)' };
+const NOGRID= { display:false };
+const fyTicks = FY_LIST;                       // x-axis labels for annual series
+
+/* Registry of live charts so filters can update them */
+const charts = {};
+
+/* ==================================================================
+   SECTION 3 — CHART BUILDERS
+   ================================================================== */
+
+/* ---- Overview: capacity mix (mini doughnut) ---- */
+function buildOvMix(fy){
+  const g = DATA.genco;
+  charts.ovMix = new Chart(document.getElementById('ovMixChart'), {
+    type:'doughnut',
+    data:{ labels:g.sources, datasets:[{ data:g.mix[fy], backgroundColor:g.sourceColors, borderColor:'#FFFFFF', borderWidth:2, hoverOffset:6 }]},
+    options:{
+      maintainAspectRatio:false, cutout:'62%',
+      plugins:{
+        legend:{ position:'bottom' },
+        tooltip:{ callbacks:{ label:(c)=>` ${c.label}: ${c.parsed} GW (${(c.parsed/ c.dataset.data.reduce((a,b)=>a+b,0)*100).toFixed(1)}%)` } }
+      }
+    }
+  });
+}
+
+/* ---- Overview: national AT&C trajectory ---- */
+function buildOvAtc(){
+  const d = DATA.discom;
+  const labels = ['FY21',...FY_LIST];
+  charts.ovAtc = new Chart(document.getElementById('ovAtcChart'), {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        { label:'Actual AT&C loss (%)', data:labels.map(y=>d.atc[y]), borderColor:css('--teal'), backgroundColor:'rgba(14,150,120,.10)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:css('--teal') },
+        { label:'RDSS glide-path (%)',  data:labels.map(y=>d.atcTarget[y]), borderColor:css('--amber'), borderDash:[6,5], pointRadius:0, tension:.3 }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, ticks:{ callback:v=>v+'%' }, suggestedMin:10, suggestedMax:24 } },
+      plugins:{ tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${c.parsed.y}%` } } }
+    }
+  });
+}
+
+/* ---- Genco: fuel mix doughnut (filterable) ---- */
+function gcMixData(fy, mode){
+  const g = DATA.genco;
+  const fossilIdx = [0,1];                       // coal, gas
+  const cleanIdx  = [2,3,4,5,6];                 // nuclear + hydro + RE
+  let idx = [...Array(g.sources.length).keys()];
+  if(mode==='fossil') idx = fossilIdx;
+  if(mode==='clean')  idx = cleanIdx;
+  return {
+    labels: idx.map(i=>g.sources[i]),
+    data:   idx.map(i=>g.mix[fy][i]),
+    colors: idx.map(i=>g.sourceColors[i])
+  };
+}
+function buildGcMix(fy, mode){
+  const d = gcMixData(fy, mode);
+  charts.gcMix = new Chart(document.getElementById('gcMixChart'), {
+    type:'doughnut',
+    data:{ labels:d.labels, datasets:[{ data:d.data, backgroundColor:d.colors, borderColor:'#FFFFFF', borderWidth:2, hoverOffset:6 }]},
+    options:{
+      maintainAspectRatio:false, cutout:'58%',
+      plugins:{
+        legend:{ position:'right' },
+        tooltip:{ callbacks:{ label:(c)=>` ${c.label}: ${c.parsed} GW (${(c.parsed/c.dataset.data.reduce((a,b)=>a+b,0)*100).toFixed(1)}%)` } }
+      }
+    }
+  });
+}
+
+/* ---- Genco: player-wise stacked capacity ---- */
+function buildGcPlayers(){
+  const g = DATA.genco;
+  charts.gcPlayers = new Chart(document.getElementById('gcPlayerChart'), {
+    type:'bar',
+    data:{
+      labels:g.players,
+      datasets:[
+        { label:'Thermal', data:g.playerStack.thermal, backgroundColor:'#6B7A94', stack:'s', borderRadius:4 },
+        { label:'Hydro',   data:g.playerStack.hydro,   backgroundColor:css('--sky'), stack:'s', borderRadius:4 },
+        { label:'RE (Solar/Wind)', data:g.playerStack.re, backgroundColor:css('--teal'), stack:'s', borderRadius:4 }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false, indexAxis:'y',
+      scales:{ x:{ stacked:true, grid:GRID, title:{display:true,text:'GW'} }, y:{ stacked:true, grid:NOGRID } },
+      plugins:{ tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${c.parsed.x} GW` } } }
+    }
+  });
+}
+
+/* ---- Genco: PLF trend ---- */
+function buildGcPlf(){
+  const s = DATA.genco.plfSeries;
+  charts.gcPlf = new Chart(document.getElementById('gcPlfChart'), {
+    type:'line',
+    data:{
+      labels:fyTicks,
+      datasets:[
+        { label:'Coal PLF (%)',  data:s.coal,  borderColor:css('--amber'), backgroundColor:'rgba(201,126,18,.10)', tension:.35, pointRadius:3, fill:true },
+        { label:'Gas PLF (%)',   data:s.gas,   borderColor:css('--violet'), tension:.35, pointRadius:3 },
+        { label:'Hydro CUF (%)', data:s.hydro, borderColor:css('--sky'),   tension:.35, pointRadius:3 }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, ticks:{ callback:v=>v+'%' }, suggestedMin:10, suggestedMax:80 } },
+      plugins:{ tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${c.parsed.y}%` } } }
+    }
+  });
+}
+
+/* ---- Transco: availability ---- */
+function buildTrAvail(){
+  const a = DATA.transco.availability;
+  charts.trAvail = new Chart(document.getElementById('trAvailChart'), {
+    type:'line',
+    data:{
+      labels:fyTicks,
+      datasets:[
+        { label:'System availability (%)', data:fyTicks.map(y=>a[y]), borderColor:css('--teal'), backgroundColor:'rgba(14,150,120,.10)', fill:true, tension:.35, pointRadius:4, pointBackgroundColor:css('--teal') },
+        { label:'Regulatory norm 99.5%', data:fyTicks.map(()=>99.5), borderColor:css('--rose'), borderDash:[6,5], pointRadius:0 }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, min:99.3, max:99.95, ticks:{ callback:v=>v.toFixed(1)+'%' } } },
+      plugins:{ tooltip:{ callbacks:{ label:c=>` ${c.dataset.label}: ${c.parsed.y}%` } } }
+    }
+  });
+}
+
+/* ---- Transco: inter-regional capacity ---- */
+function buildTrInter(){
+  const t = DATA.transco.interRegional;
+  charts.trInter = new Chart(document.getElementById('trInterChart'), {
+    type:'bar',
+    data:{
+      labels:[...fyTicks,'FY32 (T)'],
+      datasets:[{
+        label:'Inter-regional transfer capacity (GW)',
+        data:[...fyTicks.map(y=>t[y]), t.target],
+        backgroundColor:[...fyTicks.map(()=> 'rgba(31,114,196,.75)'), 'rgba(201,126,18,.80)'],
+        borderRadius:6, maxBarThickness:46
+      }]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, suggestedMin:100, title:{display:true,text:'GW'} } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>` ${c.parsed.y} GW ${c.label.includes('T')?'(national plan target)':''}` } } }
+    }
+  });
+}
+
+/* ---- Transco: network growth (dual axis) ---- */
+function buildTrGrowth(){
+  const t = DATA.transco;
+  charts.trGrowth = new Chart(document.getElementById('trGrowthChart'), {
+    data:{
+      labels:fyTicks,
+      datasets:[
+        { type:'bar', label:'Transformation capacity (lakh MVA)', data:fyTicks.map(y=>t.mvaLakh[y]), backgroundColor:'rgba(109,95,214,.65)', borderRadius:6, yAxisID:'y1', maxBarThickness:44 },
+        { type:'line', label:'Line length (lakh ckm, ≥220 kV)', data:fyTicks.map(y=>t.ckmLakh[y]), borderColor:css('--sky'), tension:.35, pointRadius:4, pointBackgroundColor:css('--sky'), yAxisID:'y' }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{
+        x:{ grid:NOGRID },
+        y :{ position:'left',  grid:GRID,   title:{display:true,text:'lakh ckm'}, suggestedMin:4.3, suggestedMax:5.3 },
+        y1:{ position:'right', grid:NOGRID, title:{display:true,text:'lakh MVA'}, suggestedMin:10, suggestedMax:15 }
+      }
+    }
+  });
+}
+
+/* ---- Discom: AT&C vs glide-path ---- */
+function buildDcAtc(){
+  const d = DATA.discom;
+  const labels = ['FY21',...FY_LIST];
+  charts.dcAtc = new Chart(document.getElementById('dcAtcChart'), {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        { label:'All India actual (%)', data:labels.map(y=>d.regions.all.atc[y]), borderColor:css('--teal'), backgroundColor:'rgba(14,150,120,.10)', fill:true, tension:.35, pointRadius:4, pointBackgroundColor:css('--teal') },
+        { label:'National RDSS glide-path (%)', data:labels.map(y=>d.atcTarget[y]), borderColor:css('--amber'), borderDash:[6,5], pointRadius:0, tension:.3 }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, ticks:{ callback:v=>v+'%' }, suggestedMin:8 } }
+    }
+  });
+}
+
+/* ---- Discom: ACS-ARR gap ---- */
+const gapColor = (v)=> v>0.4 ? 'rgba(209,72,72,.80)' : 'rgba(201,126,18,.80)';
+function buildDcGap(){
+  const d = DATA.discom;
+  const labels = ['FY21',...FY_LIST];
+  charts.dcGap = new Chart(document.getElementById('dcGapChart'), {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label:'ACS-ARR gap (₹/kWh)',
+        data:labels.map(y=>d.regions.all.gap[y]),
+        backgroundColor:labels.map(y=>gapColor(d.regions.all.gap[y])),
+        borderRadius:6, maxBarThickness:46
+      }]
+    },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, title:{display:true,text:'₹ per kWh'} } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>` Gap: ₹${c.parsed.y.toFixed(2)}/kWh` } } }
+    }
+  });
+}
+
+/* ==================================================================
+   SECTION 4 — NON-CHART COMPONENTS (table · RDSS · news)
+   ================================================================== */
+
+/* ---- State scorecard table ---- */
+let dcSortAsc = true;
+function renderStateTable(region){
+  const body = document.getElementById('dcStateBody');
+  let rows = DATA.discom.states.filter(r => region==='all' || r.rg===region);
+  rows = rows.slice().sort((a,b)=> dcSortAsc ? a.atc-b.atc : b.atc-a.atc);
+
+  const statusFor = (atc)=> atc<=12 ? ['chip-good','Healthy'] : atc<=18 ? ['chip-watch','Improving'] : ['chip-crit','Stressed'];
+  const barColor  = (atc)=> atc<=12 ? 'var(--teal)' : atc<=18 ? 'var(--amber)' : 'var(--rose)';
+
+  body.innerHTML = rows.map(r=>{
+    const [cls,label] = statusFor(r.atc);
+    const w = Math.min(100, r.atc/45*100);
+    return `<tr>
+      <td class="font-semibold">${r.st}</td>
+      <td style="color:var(--ink-mute)">${r.rg}</td>
+      <td>
+        <div class="flex items-center gap-2">
+          <span class="num font-semibold" style="min-width:3.2rem">${r.atc.toFixed(1)}%</span>
+          <div class="bar-track w-16 hidden sm:block"><div class="bar-fill" style="width:${w}%; background:${barColor(r.atc)}"></div></div>
+        </div>
+      </td>
+      <td class="num">₹${r.gap.toFixed(2)}</td>
+      <td class="num">${r.sm}%</td>
+      <td><span class="chip ${cls}">${label}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ---- RDSS progress tracker ---- */
+function renderRdss(){
+  const wrap = document.getElementById('rdssTracker');
+  wrap.innerHTML = DATA.discom.rdss.map(r=>{
+    const pct = Math.round(r.done/r.target*100);
+    return `<div class="rdss-row">
+      <div class="flex items-center justify-between text-xs mb-1">
+        <span class="font-semibold" style="color:var(--ink)">${r.name}</span>
+        <span class="num" style="color:var(--ink-mute)">${r.done} / ${r.target} ${r.unit}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${r.color}"></div></div>
+      <div class="text-right text-xs num mt-0.5" style="color:var(--ink-faint)">${pct}% achieved</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---- News feed ---- */
+function renderNews(){
+  const cls = { Positive:'chip-good', Watch:'chip-watch', Critical:'chip-crit' };
+  document.getElementById('newsFeed').innerHTML = DATA.news.map(n=>`
+    <div class="news-item p-2.5">
+      <div class="flex items-start gap-2">
+        <span class="chip ${cls[n.tag]} mt-0.5" style="flex:0 0 auto">${n.tag}</span>
+        <div>
+          <div class="text-xs font-medium leading-snug" style="color:var(--ink)">${n.t}</div>
+          <div class="text-xs mt-0.5" style="color:var(--ink-faint)">${n.src}</div>
+        </div>
+      </div>
+    </div>`).join('');
+  annotateJargon(document.getElementById('newsFeed'));
+}
+
+/* ==================================================================
+   SECTION 5 — STATE, FILTERS & NAVIGATION
+   ================================================================== */
+const $ = (id)=>document.getElementById(id);
+let currentFY = 'FY26';
+let currentRegion = 'all';
+
+/* Sync all Discom-view components (KPIs, both charts, labels, table)
+   to the selected region and fiscal year. */
+function updateDiscom(region, fy){
+  const R = DATA.discom.regions[region];
+  const labels = ['FY21', ...FY_LIST];
+  const prevFY = FY_LIST[FY_LIST.indexOf(fy)-1] || 'FY21';
+  const delta  = R.atc[fy] - R.atc[prevFY];
+
+  /* KPI cards */
+  $('dcKpiAtc').textContent  = R.atc[fy].toFixed(1)+'%';
+  $('dcKpiAtcD').textContent = (delta<=0?'−':'+') + Math.abs(delta).toFixed(1) + ' pp YoY · RDSS target 12–15%';
+  $('dcKpiGap').textContent  = '₹'+R.gap[fy].toFixed(2)+' /kWh';
+  $('dcKpiSub').textContent  = R.subsidy[fy];
+
+  /* Region name in eyebrows/titles */
+  document.querySelectorAll('.dcRegionName').forEach(el=>el.textContent = R.name);
+
+  /* Flag distribution-finance figures as provisional for the unpublished year */
+  const prov = $('dcProvChip');
+  if(prov) prov.style.display = (fy === 'FY26') ? 'inline-flex' : 'none';
+
+  /* AT&C trend chart */
+  charts.dcAtc.data.datasets[0].data  = labels.map(y=>R.atc[y]);
+  charts.dcAtc.data.datasets[0].label = R.name+' actual (%)';
+  charts.dcAtc.update();
+
+  /* ACS-ARR gap chart */
+  charts.dcGap.data.datasets[0].data = labels.map(y=>R.gap[y]);
+  charts.dcGap.data.datasets[0].backgroundColor = labels.map(y=>gapColor(R.gap[y]));
+  charts.dcGap.update();
+
+  /* State scorecard */
+  renderStateTable(region);
+}
+
+/* Refresh every FY-dependent number & chart */
+function applyFY(fy){
+  currentFY = fy;
+  const n = DATA.national[fy], g = DATA.genco, t = DATA.transco, d = DATA.discom;
+  const total = g.mix[fy].reduce((a,b)=>a+b,0);
+  const nonFossil = (g.mix[fy][2]+g.mix[fy][3]+g.mix[fy][4]+g.mix[fy][5]+g.mix[fy][6]) / total * 100;
+
+  /* labels */
+  document.querySelectorAll('.gcFyLabel,.trFyLabel,.dcFyLabel').forEach(el=>el.textContent = FY_LABELS[fy]);
+  $('ovFyLabel').textContent = FY_LABELS[fy];
+
+  /* value-chain corridor */
+  $('vcCap').textContent  = Math.round(total);
+  $('vcPlf').textContent  = g.coalPlf[fy].toFixed(1)+'%';
+  $('vcRe').textContent   = nonFossil.toFixed(1)+'%';
+  $('vcCkm').textContent  = t.ckmLakh[fy].toFixed(2)+'L';
+  $('vcMva').textContent  = t.mvaLakh[fy].toFixed(1)+'L';
+  $('vcAvail').textContent= t.availability[fy].toFixed(2)+'%';
+  $('vcAtc').textContent  = d.atc[fy].toFixed(1)+'%';
+  $('vcGap').textContent  = '₹'+d.gap[fy].toFixed(2);
+  $('vcSm').textContent   = d.smartMetersCr[fy];
+
+  /* national KPIs */
+  $('kNatPeak').textContent    = n.peak+' GW';
+  $('kNatPeakD').textContent   = n.peakYoY;
+  $('kNatEnergy').textContent  = n.energy.toLocaleString('en-IN')+' BU';
+  $('kNatEnergyD').textContent = n.energyYoY;
+  $('kNatDeficit').textContent = n.deficit;
+  $('kNatDebt').textContent    = n.debt;
+
+  /* Genco KPIs */
+  $('gcKpiCap').textContent = Math.round(total)+' GW';
+  $('gcKpiPlf').textContent = g.coalPlf[fy].toFixed(1)+'%';
+  $('gcKpiPlfD').textContent= g.plfDelta[fy];
+  $('gcKpiRe').textContent  = nonFossil.toFixed(1)+'%';
+
+  /* Transco KPIs */
+  $('trKpiCkm').textContent  = t.ckmLakh[fy].toFixed(2)+' L ckm';
+  $('trKpiCkmD').textContent = t.ckmDelta[fy];
+  $('trKpiMva').textContent  = t.mvaLakh[fy].toFixed(1)+' L MVA';
+  $('trKpiMvaD').textContent = t.mvaDelta[fy];
+  $('trKpiAvail').textContent= t.availability[fy].toFixed(2)+'%';
+
+  /* Discom KPIs + charts (region-aware) */
+  updateDiscom(currentRegion, fy);
+
+  /* FY-dependent charts */
+  charts.ovMix.data.datasets[0].data = g.mix[fy];
+  charts.ovMix.update();
+  const mixMode = $('gcFuelFilter').value;
+  const md = gcMixData(fy, mixMode);
+  charts.gcMix.data.labels = md.labels;
+  charts.gcMix.data.datasets[0].data = md.data;
+  charts.gcMix.data.datasets[0].backgroundColor = md.colors;
+  charts.gcMix.update();
+
+  /* If live data has been synced, re-apply it on top of the latest FY */
+  overlayLive();
+}
+
+/* Tab switching (nav buttons + value-chain shortcuts) */
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('view-'+name).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+
+  /* The Challenges view is a latest-snapshot analysis — the fiscal-year
+     selector doesn't apply there, so swap it for a snapshot label. */
+  const snapshotOnly = (name === 'insights');
+  $('fyCtl').style.display = snapshotOnly ? 'none' : 'flex';
+  $('fySnapshotChip').style.display = snapshotOnly ? 'inline-flex' : 'none';
+  window.scrollTo({ top:0, behavior:'smooth' });
+  /* charts sized while hidden need a resize on first reveal */
+  requestAnimationFrame(()=>Object.values(charts).forEach(c=>c.resize()));
+}
+document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click', ()=>switchView(b.dataset.view)));
+document.querySelectorAll('.vc-stage').forEach(b=>b.addEventListener('click', ()=>switchView(b.dataset.goto)));
+
+/* Filters */
+$('fySelect').addEventListener('change', e=>applyFY(e.target.value));
+$('gcFuelFilter').addEventListener('change', ()=>{
+  const md = gcMixData(currentFY, $('gcFuelFilter').value);
+  charts.gcMix.data.labels = md.labels;
+  charts.gcMix.data.datasets[0].data = md.data;
+  charts.gcMix.data.datasets[0].backgroundColor = md.colors;
+  charts.gcMix.update();
+});
+$('dcRegionFilter').addEventListener('change', e=>{
+  currentRegion = e.target.value;
+  updateDiscom(currentRegion, currentFY);
+  overlayLive();
+});
+$('dcSortBtn').addEventListener('click', ()=>{
+  dcSortAsc = !dcSortAsc;
+  renderStateTable($('dcRegionFilter').value);
+});
+
+
+/* ==================================================================
+   SECTION 5A — JARGON GLOSSARY (hover / focus tooltips)
+   Scans visible text and wraps known sector terms in tooltip spans.
+   Ordered longest-first so 'ACS-ARR' wins over 'ACS'.
+   ================================================================== */
+const GLOSSARY = [
+  [/ACS-ARR/, 'ACS (Average Cost of Supply) minus ARR (Average Revenue Realised) per unit — the money a discom loses on every kWh it sells. RDSS endpoint: zero gap.'],
+  [/AT&C/, 'Aggregate Technical & Commercial losses — the share of electricity supplied that earns no revenue: technical line losses plus theft, unbilled energy and unpaid bills.'],
+  [/RDSS/, 'Revamped Distribution Sector Scheme (2021) — ₹3.03 lakh crore results-linked programme to cut AT&C losses to 12–15% and close the ACS-ARR gap. Fund tranches unlock only when reform milestones are met.'],
+  [/\bPLF\b/, 'Plant Load Factor — actual generation as a % of the maximum a plant could produce; the key utilisation measure for thermal stations.'],
+  [/\bCUF\b/, 'Capacity Utilisation Factor — the PLF equivalent for hydro and renewables, whose output varies with water, sun and wind.'],
+  [/\bckm\b/, 'Circuit kilometres — transmission line length counting each circuit strung on a tower separately.'],
+  [/\bMVA\b/, 'Mega volt-ampere — transformer capacity at substations to step power up or down. 1 lakh MVA = 100 GVA.'],
+  [/\bBU\b/, 'Billion Units — one billion kilowatt-hours (kWh) of electricity.'],
+  [/\bGencos?\b/, 'Generating companies — central (e.g. NTPC), state and private players that produce electricity and sell it to discoms under power purchase agreements.'],
+  [/\bTranscos?\b/, 'Transmission companies — POWERGRID and state transcos that carry bulk power over the high-voltage grid from plants to distribution networks.'],
+  [/\bDiscoms?\b/i, 'Distribution companies — mostly state-owned utilities that buy bulk power, run the local wires, bill consumers and collect revenue. The financially weakest link in the chain.'],
+  [/glide-path/i, 'The year-wise loss-reduction trajectory each state agreed under RDSS; staying on it is a precondition for fund release.'],
+  [/non-fossil/i, 'Capacity from solar, wind, other renewables, large hydro and nuclear — everything except coal, lignite, gas and diesel.'],
+  [/feeder segregation/i, 'Separating agricultural feeders from village supply so farm power can be scheduled (e.g. solarised daytime supply) and its losses measured precisely.'],
+  [/smart meters?/i, 'Prepaid, remotely-read consumer meters — eliminate manual reading errors and theft at the meter, and turn collection into upfront recharge.'],
+  [/\bDT\b/, 'Distribution Transformer — the neighbourhood transformer. Metering DTs pinpoints exactly which pockets of the network are losing energy.'],
+  [/\bPAT\b/, 'Profit After Tax.'],
+  [/inter-regional/i, 'Transfer capacity between the five regional grids (N/W/S/E/NE) — the headroom to move surplus power to wherever demand peaks.'],
+  [/grid availability/i, 'The share of time transmission elements stay in service. The regulatory norm is 99.5%; POWERGRID consistently exceeds it.'],
+  [/peak demand/i, 'The highest simultaneous electricity load served by the grid — the moment the system is stretched hardest.'],
+  [/subsidy disbursal/i, 'States announcing tariff subsidies must actually transfer the cash to discoms each quarter — a precondition for RDSS grants and a top cause of discom stress when delayed.']
+];
+
+function annotateJargon(root){
+  if(!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode(n){
+    if(!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+    const p = n.parentElement;
+    if(!p || p.closest('.term, script, style, option, select, .num, button')) return NodeFilter.FILTER_REJECT;
+    return NodeFilter.FILTER_ACCEPT;
+  }});
+  const nodes = [];
+  while(walker.nextNode()) nodes.push(walker.currentNode);
+
+  nodes.forEach(node => {
+    const text = node.nodeValue;
+    let cursor = 0; const out = [];
+    for(;;){
+      let best = null;
+      for(const [re, tip] of GLOSSARY){
+        const m = re.exec(text.slice(cursor));
+        if(m && (best === null || m.index < best.index)) best = { index:m.index, str:m[0], tip };
+      }
+      if(!best) break;
+      const abs = cursor + best.index;
+      if(abs > cursor) out.push(document.createTextNode(text.slice(cursor, abs)));
+      const span = document.createElement('span');
+      span.className = 'term'; span.setAttribute('data-tip', best.tip);
+      span.setAttribute('tabindex','0'); span.textContent = best.str;
+      out.push(span);
+      cursor = abs + best.str.length;
+    }
+    if(out.length){
+      out.push(document.createTextNode(text.slice(cursor)));
+      const frag = document.createDocumentFragment();
+      out.forEach(x => frag.appendChild(x));
+      node.parentNode.replaceChild(frag, node);
+    }
+  });
+}
+
+/* ==================================================================
+   SECTION 5B — CHALLENGES & PRIORITIES COMPONENTS
+   All figures derive from the dashboard's current dataset.
+   ================================================================== */
+const INSIGHTS = {
+  /* Rupee journey for the 4 most stressed states (AT&C > 20%) */
+  waterfall: {
+    labels: ['Cost to supply 1 unit', 'Unbilled energy', 'Uncollected bills', 'Delayed subsidy', 'Actually realised'],
+    steps:  [7.65, -0.92, -0.51, -0.37]           // start, then leaks; end computed
+  },
+  /* Collection efficiency % by consumer category */
+  collections: {
+    years: ['FY22','FY23','FY24','FY25','FY26'],
+    series: {
+      'Industrial':  [92, 93, 94, 95.5, 96],
+      'Commercial':  [88, 90, 91, 92.5, 93],
+      'Residential': [82, 85, 88, 90,   91],
+      'Agriculture': [65, 68, 72, 76,   78]
+    },
+    norm: 95
+  },
+  /* AT&C points cut per ₹100 cr of RDSS spend (FY22→FY26) */
+  spend: [
+    { u:'Gujarat (GUVNL)',        v: 1.00 },
+    { u:'Bihar (N/SBPDCL)',       v: 0.95 },
+    { u:'Tamil Nadu (TANGEDCO)',  v: 0.80 },
+    { u:'Maharashtra (MSEDCL)',   v: 0.71 },
+    { u:'West Bengal (WBSEDCL)',  v: 0.55 },
+    { u:'Odisha (TP discoms)',    v: 0.50 },
+    { u:'Rajasthan discoms',      v: 0.40 },
+    { u:'MP discoms',             v: 0.35 },
+    { u:'Uttar Pradesh (UPPCL)',  v: 0.12 },
+    { u:'Punjab (PSPCL)',         v:-0.27 }
+  ],
+  /* Priority sequencing */
+  priorities: [
+    { r:1, name:'Smart metering surge', sub:'UP · Punjab · Jharkhand', effort:['Medium',50,'#A4670B'], impact:['Highest',95,'#D14848'], out:'4–5 pt AT&C cut in laggard states' },
+    { r:2, name:'Feeder & DT metering completion', sub:'Worst 20% of circles first', effort:['Medium',50,'#A4670B'], impact:['High',78,'#D14848'], out:'Energy accounting pinpoints theft pockets' },
+    { r:3, name:'Agriculture collection reform', sub:'No new capital required', effort:['Low',25,'#0E9678'], impact:['Medium-high',65,'#A4670B'], out:'78% → 92% farm collection · ₹1,200 Cr/yr' },
+    { r:4, name:'Ring-fence loss-reduction capex', sub:'Vs. diversion to new connections', effort:['Low',25,'#0E9678'], impact:['Medium',50,'#A4670B'], out:'Protects Priority 1 & 2 spend' },
+    { r:5, name:'Quarterly subsidy discipline', sub:'Needs state finance dept. sign-off', effort:['Medium-high',65,'#D14848'], impact:['Medium',50,'#A4670B'], out:'Keeps ₹0.06 gap from reopening' }
+  ]
+};
+
+/* ---- A · Banded state AT&C chart + computed headline ---- */
+function buildInStates(){
+  const rows = DATA.discom.states.slice().sort((a,b)=>b.atc-a.atc);
+  const band = v => v>25 ? 'rgba(209,72,72,.85)' : v>=15 ? 'rgba(201,126,18,.85)' : 'rgba(14,150,120,.85)';
+  charts.inStates = new Chart(document.getElementById('inStatesChart'), {
+    type:'bar',
+    data:{ labels:rows.map(r=>r.st), datasets:[{ data:rows.map(r=>r.atc), backgroundColor:rows.map(r=>band(r.atc)), borderRadius:4, maxBarThickness:16 }]},
+    options:{
+      maintainAspectRatio:false, indexAxis:'y',
+      scales:{ x:{ grid:GRID, ticks:{ callback:v=>v+'%' } }, y:{ grid:NOGRID, ticks:{ autoSkip:false, font:{ size:10 } } } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>` AT&C loss: ${c.parsed.x}%` } } }
+    }
+  });
+  /* Dynamic headline so it always matches the table data */
+  const crit = rows.filter(r=>r.atc>25), risk = rows.filter(r=>r.atc>=15 && r.atc<=25);
+  const names = crit.map(r=>r.st).join(' and ');
+  $('insStatesHead').innerHTML =
+    `<b>${crit.length === 1 ? 'One state' : crit.length + ' states'}</b> — <span class="hi-crit">${names}</span> — still run AT&C losses <b>above 25%</b>, nearly double the RDSS ceiling; <b>${risk.length} more</b> sit in the 15–25% at-risk band`;
+}
+
+/* ---- B · Waterfall (floating bars) ---- */
+function buildInWaterfall(){
+  const w = INSIGHTS.waterfall;
+  const start = w.steps[0];
+  let run = start;
+  const ranges = [[0, start]];
+  for(let i=1;i<w.steps.length;i++){ ranges.push([run + w.steps[i], run]); run += w.steps[i]; }
+  ranges.push([0, run]);   // final realised bar
+  const colors = ['rgba(31,114,196,.85)','rgba(209,72,72,.85)','rgba(209,72,72,.85)','rgba(209,72,72,.85)','rgba(14,150,120,.85)'];
+  charts.inWaterfall = new Chart(document.getElementById('inWaterfallChart'), {
+    type:'bar',
+    data:{ labels:w.labels, datasets:[{ data:ranges, backgroundColor:colors, borderRadius:5, maxBarThickness:56 }]},
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID, ticks:{ font:{ size:10 } } }, y:{ grid:GRID, title:{ display:true, text:'₹ per kWh' }, suggestedMax:8.5 } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{
+        label:(c)=>{
+          const i=c.dataIndex, r=c.raw;
+          if(i===0) return ` Cost to supply: ₹${r[1].toFixed(2)}/kWh`;
+          if(i===c.dataset.data.length-1) return ` Actually realised: ₹${r[1].toFixed(2)}/kWh`;
+          return ` Leak: −₹${(r[1]-r[0]).toFixed(2)}/kWh`;
+        } } } }
+    }
+  });
+}
+
+/* ---- D · Collections by category ---- */
+function buildInCollect(){
+  const c = INSIGHTS.collections;
+  const palette = { 'Industrial':'#A4670B', 'Commercial':'#0E9678', 'Residential':'#1F72C4', 'Agriculture':'#D14848' };
+  const ds = Object.entries(c.series).map(([k,v])=>({ label:k, data:v, borderColor:palette[k], pointBackgroundColor:palette[k], tension:.35, pointRadius:3 }));
+  ds.push({ label:'95% norm', data:c.years.map(()=>c.norm), borderColor:'#1B2436', borderDash:[5,5], pointRadius:0, borderWidth:1.5 });
+  charts.inCollect = new Chart(document.getElementById('inCollectChart'), {
+    type:'line',
+    data:{ labels:c.years, datasets:ds },
+    options:{
+      maintainAspectRatio:false,
+      scales:{ x:{ grid:NOGRID }, y:{ grid:GRID, min:60, max:100, ticks:{ callback:v=>v+'%' } } },
+      plugins:{ tooltip:{ callbacks:{ label:x=>` ${x.dataset.label}: ${x.parsed.y}%` } } }
+    }
+  });
+}
+
+/* ---- E · Spend efficiency ---- */
+function buildInSpend(){
+  const rows = INSIGHTS.spend;
+  const col = v => v<0 ? 'rgba(209,72,72,.85)' : v<0.45 ? 'rgba(201,126,18,.85)' : 'rgba(14,150,120,.85)';
+  charts.inSpend = new Chart(document.getElementById('inSpendChart'), {
+    type:'bar',
+    data:{ labels:rows.map(r=>r.u), datasets:[{ data:rows.map(r=>r.v), backgroundColor:rows.map(r=>col(r.v)), borderRadius:4, maxBarThickness:18 }]},
+    options:{
+      maintainAspectRatio:false, indexAxis:'y',
+      scales:{ x:{ grid:GRID, title:{ display:true, text:'AT&C pts cut per ₹100 cr' } }, y:{ grid:NOGRID, ticks:{ autoSkip:false, font:{ size:10 } } } },
+      plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label:c=>` ${c.parsed.x>=0?'+':''}${c.parsed.x.toFixed(2)} pt per ₹100 cr` } } }
+    }
+  });
+}
+
+/* ---- C · Smart meter coverage list (derived live from the state scorecard) ---- */
+function renderMeterProgress(){
+  const rows = DATA.discom.states.slice().sort((a,b)=>b.sm-a.sm);
+  const traj = v => v>=50 ? ['AHEAD','chip-good','var(--teal)']
+             : v>=30 ? ['ON-TRACK','chip-info','var(--sky)']
+             : v>=10 ? ['BEHIND','chip-watch','#C97E12']
+             :         ['STALLED','chip-crit','var(--rose)'];
+  $('inMeterList').innerHTML = rows.map(r=>{
+    const [label, chip, color] = traj(r.sm);
+    return `<div class="flex items-center gap-3">
+      <span class="text-xs font-semibold" style="width:8.5rem; flex:0 0 auto">${r.st}</span>
+      <div class="bar-track flex-1"><div class="bar-fill" style="width:${Math.max(r.sm,1.5)}%; background:${color}"></div></div>
+      <span class="num text-xs font-bold" style="width:2.6rem; text-align:right">${r.sm}%</span>
+      <span class="chip ${chip}" style="width:5.6rem; justify-content:center">${label}</span>
+    </div>`;
+  }).join('');
+  /* Headline computed from the same data so it can never drift */
+  const top = rows[0], stalled = rows.filter(r=>r.sm<10);
+  const behind = rows.filter(r=>r.sm>=10 && r.sm<30);
+  $('inMeterHead').innerHTML =
+    `<b>${top.st}</b> leads at <span class="hi-good">${top.sm}%</span> coverage; <b>${behind.length} states</b> are <span class="hi-watch">behind (under 30%)</span> and <b>${stalled.map(r=>r.st).join(', ')}</b> ${stalled.length===1?'has':'have'} <span class="hi-crit">barely begun</span>`;
+}
+
+/* ---- F · Priority sequencing table ---- */
+function renderPriority(){
+  const body = $('inPriorityTable').querySelector('tbody');
+  const meter = (label, pct, color) =>
+    `<div class="flex items-center gap-2"><span class="meter"><i style="width:${pct}%;background:${color}"></i></span><span class="text-xs" style="color:var(--ink-mute)">${label}</span></div>`;
+  body.innerHTML = INSIGHTS.priorities.map(p=>`
+    <tr>
+      <td class="pr-rank">${p.r}</td>
+      <td><div class="font-bold">${p.name}</div><div class="text-xs" style="color:var(--ink-faint)">${p.sub}</div></td>
+      <td>${meter(...p.effort)}</td>
+      <td>${meter(...p.impact)}</td>
+      <td class="font-semibold" style="color:var(--teal)">${p.out}</td>
+    </tr>`).join('');
+}
+
+/* ==================================================================
+   SECTION 6 — LIVE DATA PLUG-IN
+   Keeps the dashboard current at runtime. Two providers:
+
+   A) 'claude'  — calls the Anthropic API with the web-search tool and
+                  asks for the latest OFFICIAL figures as strict JSON.
+                  Works out-of-the-box when this file runs inside
+                  Claude.ai (auth is handled by the artifact runtime).
+
+   B) 'custom'  — set CUSTOM_FEED_URL below to an internal JSON
+                  endpoint (e.g. an NIC-hosted gateway aggregating
+                  CEA / Grid-India / NPP / RDSS data). Same JSON shape.
+                  Takes priority over 'claude' when configured.
+
+   Expected JSON shape (all keys optional; missing keys are skipped):
+   {
+     "asOf": "Jun 2026",
+     "totalCapacityGW": 540.1,   "nonFossilSharePct": 53.0,
+     "coalPlfPct": 70.2,
+     "transmissionLakhCkm": 5.10, "transformationLakhMVA": 14.2,
+     "gridAvailabilityPct": 99.83, "interRegionalGW": 121.5,
+     "atcLossPct": 14.9,          "acsArrGapRs": 0.06,
+     "rdssSmartMetersCr": 4.8,
+     "peakDemandMetGW": 270.8,    "energySuppliedBU": 1840,
+     "headlines": [ { "t":"…", "tag":"Positive|Watch|Critical", "src":"…" } ]
+   }
+   ================================================================== */
+const DATA_SERVER_URL = '';   // ← absolute URL of the data server, e.g. 'http://localhost:8080'
+const SAME_ORIGIN_API = true;  // ← true automatically when this file is served BY the data server
+const CUSTOM_FEED_URL = '';    // ← optional external live feed (used only if no data server configured)
+const apiBase    = () => SAME_ORIGIN_API ? '' : DATA_SERVER_URL.replace(/\/$/, '');
+const apiEnabled = () => SAME_ORIGIN_API || !!DATA_SERVER_URL;
+const LATEST_FY = 'FY26';
+let liveData = null;
+
+const LIVE_PROMPT = `Search the web for the most recent OFFICIAL figures for India's power sector. Prefer primary sources: CEA (cea.nic.in), Ministry of Power / PIB releases, Grid-India, PFC discom reports, RDSS/NSGM portals.
+Respond with ONLY a raw JSON object — no prose, no markdown fences — using exactly these keys (use null for anything you cannot verify):
+{"asOf":"<month year the data refers to>","totalCapacityGW":number,"nonFossilSharePct":number,"coalPlfPct":number,"transmissionLakhCkm":number,"transformationLakhMVA":number,"gridAvailabilityPct":number,"interRegionalGW":number,"atcLossPct":number,"acsArrGapRs":number,"rdssSmartMetersCr":number,"peakDemandMetGW":number,"energySuppliedBU":number,"headlines":[{"t":"<headline under 20 words>","tag":"Positive|Watch|Critical","src":"<source · date>"}]}
+atcLossPct and acsArrGapRs must be the latest audited PFC/MoP national figures. headlines: at most 3, most recent first.`;
+
+async function fetchViaClaude(){
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      messages: [{ role:'user', content: LIVE_PROMPT }],
+      tools: [{ type:'web_search_20250305', name:'web_search' }]
+    })
+  });
+  if(!resp.ok) throw new Error('API responded '+resp.status);
+  const data = await resp.json();
+  const text = (data.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text).join('\n');
+  const clean = text.replace(/```json|```/g, '').trim();
+  const jsonStart = clean.indexOf('{');
+  if(jsonStart < 0) throw new Error('No JSON in response');
+  return JSON.parse(clean.slice(jsonStart, clean.lastIndexOf('}')+1));
+}
+
+async function fetchViaFeed(url){
+  const resp = await fetch(url, { headers:{ 'Accept':'application/json' } });
+  if(!resp.ok) throw new Error('Feed responded '+resp.status);
+  return resp.json();
+}
+
+/* Apply live values on top of the latest-FY view. Only overlays what the
+   feed actually provided; regional Discom views stay untouched. */
+function overlayLive(){
+  if(!liveData || currentFY !== LATEST_FY) return;
+  const L = liveData;
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  const set = (id, v) => { const el = $(id); if(el && v != null) el.textContent = v; };
+
+  /* Value-chain corridor */
+  if(isNum(L.totalCapacityGW))    set('vcCap',  Math.round(L.totalCapacityGW));
+  if(isNum(L.coalPlfPct))         set('vcPlf',  L.coalPlfPct.toFixed(1)+'%');
+  if(isNum(L.nonFossilSharePct))  set('vcRe',   L.nonFossilSharePct.toFixed(1)+'%');
+  if(isNum(L.transmissionLakhCkm))set('vcCkm',  L.transmissionLakhCkm.toFixed(2)+'L');
+  if(isNum(L.transformationLakhMVA)) set('vcMva', L.transformationLakhMVA.toFixed(1)+'L');
+  if(isNum(L.gridAvailabilityPct))set('vcAvail',L.gridAvailabilityPct.toFixed(2)+'%');
+  if(isNum(L.atcLossPct))         set('vcAtc',  L.atcLossPct.toFixed(1)+'%');
+  if(isNum(L.acsArrGapRs))        set('vcGap',  '₹'+L.acsArrGapRs.toFixed(2));
+  if(isNum(L.rdssSmartMetersCr))  set('vcSm',   L.rdssSmartMetersCr.toFixed(1)+' cr');
+
+  /* National + segment KPI cards */
+  if(isNum(L.peakDemandMetGW))    set('kNatPeak',   Math.round(L.peakDemandMetGW)+' GW');
+  if(isNum(L.energySuppliedBU))   set('kNatEnergy', Math.round(L.energySuppliedBU).toLocaleString('en-IN')+' BU');
+  if(isNum(L.totalCapacityGW))    set('gcKpiCap',   Math.round(L.totalCapacityGW)+' GW');
+  if(isNum(L.coalPlfPct))         set('gcKpiPlf',   L.coalPlfPct.toFixed(1)+'%');
+  if(isNum(L.nonFossilSharePct))  set('gcKpiRe',    L.nonFossilSharePct.toFixed(1)+'%');
+  if(isNum(L.transmissionLakhCkm))set('trKpiCkm',   L.transmissionLakhCkm.toFixed(2)+' L ckm');
+  if(isNum(L.transformationLakhMVA)) set('trKpiMva', L.transformationLakhMVA.toFixed(1)+' L MVA');
+  if(isNum(L.gridAvailabilityPct))set('trKpiAvail', L.gridAvailabilityPct.toFixed(2)+'%');
+  if(currentRegion === 'all'){
+    if(isNum(L.atcLossPct))  set('dcKpiAtc', L.atcLossPct.toFixed(1)+'%');
+    if(isNum(L.acsArrGapRs)) set('dcKpiGap', '₹'+L.acsArrGapRs.toFixed(2)+' /kWh');
+  }
+
+  /* Latest-FY chart points */
+  if(isNum(L.interRegionalGW) && charts.trInter){
+    charts.trInter.data.datasets[0].data[FY_LIST.length-1] = L.interRegionalGW;
+    charts.trInter.update();
+  }
+  /* RDSS tracker: smart meter row */
+  if(isNum(L.rdssSmartMetersCr)){
+    DATA.discom.rdss[0].done = L.rdssSmartMetersCr;
+    renderRdss();
+  }
+  /* Prepend fresh headlines to the intelligence feed */
+  if(Array.isArray(L.headlines) && L.headlines.length){
+    const fresh = L.headlines
+      .filter(h => h && h.t && ['Positive','Watch','Critical'].includes(h.tag))
+      .map(h => ({ t:h.t, tag:h.tag, src:(h.src||'Live sync')+' · live' }));
+    DATA.news = [...fresh, ...DATA.news.filter(n => !n.src.endsWith('· live'))].slice(0, 10);
+    renderNews();
+  }
+}
+
+async function syncLiveData(){
+  const btn = $('liveSyncBtn'), label = $('liveSyncLabel'), stamp = $('liveStamp');
+  const icon = btn.querySelector('svg') || btn.querySelector('i');
+  btn.disabled = true; label.textContent = 'Syncing…';
+  if(icon) icon.classList.add('spin');
+  try{
+    if(apiEnabled())          liveData = await fetchViaFeed(apiBase() + '/api/live');
+    else if(CUSTOM_FEED_URL)  liveData = await fetchViaFeed(CUSTOM_FEED_URL);
+    else                      liveData = await fetchViaClaude();
+    overlayLive();
+    const t = new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    stamp.style.display = 'inline-flex';
+    stamp.textContent = 'Live · data as of ' + (liveData.asOf || 'latest') + ' · synced ' + t;
+    label.textContent = 'Re-sync';
+  }catch(err){
+    console.error('Live sync failed:', err);
+    stamp.style.display = 'inline-flex';
+    stamp.className = 'chip chip-watch';
+    stamp.textContent = 'Live sync unavailable — showing last verified figures';
+    label.textContent = 'Retry sync';
+  }finally{
+    btn.disabled = false;
+    if(icon) icon.classList.remove('spin');
+  }
+}
+$('liveSyncBtn').addEventListener('click', syncLiveData);
+
+/* ==================================================================
+   SECTION 7 — BOOT
+   ================================================================== */
+/* Pull the dataset from the data server when one is configured;
+   fall back silently to the embedded dataset otherwise. */
+async function loadServerData(){
+  if(!apiEnabled()) return false;
+  try{
+    const resp = await fetch(apiBase() + '/api/all', { headers:{ 'Accept':'application/json' } });
+    if(!resp.ok) throw new Error('server responded ' + resp.status);
+    const remote = await resp.json();
+    ['national','genco','transco','discom','news'].forEach(k => { if(remote[k]) DATA[k] = remote[k]; });
+    if(remote.insights) Object.keys(remote.insights).forEach(k => INSIGHTS[k] = remote.insights[k]);
+    console.info('[data] loaded from server', apiBase() || '(same origin)', '· updated', remote.updatedAt || 'n/a');
+    return true;
+  }catch(err){
+    console.warn('[data] server unavailable, using embedded dataset —', err.message);
+    return false;
+  }
+}
+
+(async () => {
+  const fromServer = await loadServerData();
+  buildOvMix(currentFY);
+  buildOvAtc();
+  buildGcMix(currentFY, 'all');
+  buildGcPlayers();
+  buildGcPlf();
+  buildTrAvail();
+  buildTrInter();
+  buildTrGrowth();
+  buildDcAtc();
+  buildDcGap();
+  renderStateTable('all');
+  renderRdss();
+  renderNews();
+  buildInStates();
+  buildInWaterfall();
+  buildInCollect();
+  buildInSpend();
+  renderMeterProgress();
+  renderPriority();
+  applyFY(currentFY);
+  annotateJargon(document.querySelector('main'));
+  if(fromServer){
+    const st = $('liveStamp');
+    st.style.display = 'inline-flex';
+    st.textContent = 'Connected to data server';
+  }
+})();
+
+/* Icon guard: if Lucide hasn't loaded yet (slow CDN) retry on window load;
+   if it never loads, the dashboard simply renders without icons — no error. */
+function safeIcons(){
+  if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+}
+safeIcons();
+window.addEventListener('load', safeIcons);
+</script>
+</body>
+</html>
