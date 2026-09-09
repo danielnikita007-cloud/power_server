@@ -1,13 +1,8 @@
 [
   {
-    "t": "English Releases",
-    "tag": "Watch",
-    "src": "PIB · Mar 2026"
-  },
-  {
     "t": "Power Ministry Parallel Distribution Framework",
     "tag": "Watch",
-    "src": "Sarkaritel.com · Jul 2026"
+    "src": "sarkaritel.com · Jul 2026"
   },
   {
     "t": "Union Minister Manohar Lal calls DISCOMs backbone of country’s power sector",
@@ -15,33 +10,38 @@
     "src": "News On AIR · May 2026"
   },
   {
-    "t": "Power ministry releases draft norms for unified electricity data-sharing",
+    "t": "Power ministry releases draft norms for unified electricity data-sharing - business-standard.com",
     "tag": "Watch",
-    "src": "Business Standard · Jul 2026"
+    "src": "business-standard.com · Jul 2026"
+  },
+  {
+    "t": "Power Ministry Draws AI Era Grid Roadmap",
+    "tag": "Watch",
+    "src": "Construction World · Jul 2026"
   },
   {
     "t": "Structural Challenges in India’s Energy Architecture: A Sectoral Overview",
     "tag": "Watch",
-    "src": "Vivekananda International Foundation (VIF) · Jun 2026"
+    "src": "vifindia.org · Jun 2026"
   },
   {
-    "t": "Power ministry seeks stakeholder comments on draft National Electricity Policy 2026",
+    "t": "English Releases",
     "tag": "Watch",
-    "src": "ET EnergyWorld · Jan 2026"
+    "src": "PIB · Mar 2026"
   },
   {
-    "t": "India’s power distribution utilities post ₹2,701 crore net profit as State DisComs trim losses by 80%",
+    "t": "Multiple discoms may supply power through existing distribution networks",
+    "tag": "Watch",
+    "src": "Livemint · Jul 2026"
+  },
+  {
+    "t": "Union minister Manohar Lal asks Jharkhand to cut power losses, restructure DISCOM debt",
     "tag": "Critical",
-    "src": "The Hindu · Jan 2026"
+    "src": "The Times of India · Jun 2026"
   },
   {
-    "t": "Power Minister Calls for Stronger, Financially Viable DISCOMs at EDICON 2026",
+    "t": "Delhi HC clears way for CAG audit of discoms; Power Minister Ashish Sood welcomes order",
     "tag": "Watch",
-    "src": "Energetica India Magazine · Jan 2026"
-  },
-  {
-    "t": "DISCOMs post rare profit, but questions remain over sustainability and accounting reforms",
-    "tag": "Positive",
-    "src": "Down To Earth · Jan 2026"
+    "src": "The Tribune · Jun 2026"
   }
 ]
