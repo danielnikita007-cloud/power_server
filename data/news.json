@@ -1,10 +1,5 @@
 [
   {
-    "t": "English Releases",
-    "tag": "Watch",
-    "src": "Press Information Bureau · Mar 2026"
-  },
-  {
     "t": "Power Ministry Parallel Distribution Framework",
     "tag": "Watch",
     "src": "Sarkaritel.com · Jul 2026"
@@ -15,33 +10,38 @@
     "src": "Business Standard · Jul 2026"
   },
   {
-    "t": "UP discoms ratings go up, PVVNL shines with A+ in power ministry report",
+    "t": "Union Minister Manohar Lal calls DISCOMs backbone of country’s power sector",
     "tag": "Watch",
-    "src": "timesofindia.indiatimes.com · Jan 2026"
+    "src": "News On AIR · May 2026"
+  },
+  {
+    "t": "Multiple discoms may supply power through existing distribution networks",
+    "tag": "Watch",
+    "src": "Livemint · Jul 2026"
+  },
+  {
+    "t": "Union minister Manohar Lal asks Jharkhand to cut power losses, restructure DISCOM debt",
+    "tag": "Critical",
+    "src": "The Times of India · Jun 2026"
+  },
+  {
+    "t": "Delhi HC clears way for CAG audit of discoms; Power Minister Ashish Sood welcomes order",
+    "tag": "Watch",
+    "src": "The Tribune · Jun 2026"
+  },
+  {
+    "t": "Rs 800 crore recovery, 20 million smart meters: Centre puts West Bengal power sector on notice",
+    "tag": "Watch",
+    "src": "Moneycontrol.com · Jun 2026"
+  },
+  {
+    "t": "English Releases",
+    "tag": "Watch",
+    "src": "PIB · Mar 2026"
   },
   {
     "t": "Discom Dues Reduced to Rs 3,300 Cr: Power Ministry",
     "tag": "Watch",
     "src": "Rediff MoneyWiz · Apr 2026"
-  },
-  {
-    "t": "In a 'turning point', discoms post ₹2,701 cr profit in FY25, AT&amp;C losses narrow: Govt",
-    "tag": "Critical",
-    "src": "Livemint · Jan 2026"
-  },
-  {
-    "t": "India’s power distribution utilities post ₹2,701 crore net profit as State DisComs trim losses by 80%",
-    "tag": "Critical",
-    "src": "thehindu.com · Jan 2026"
-  },
-  {
-    "t": "Power Minister Calls for Stronger, Financially Viable DISCOMs at EDICON 2026",
-    "tag": "Watch",
-    "src": "Energetica India Magazine · Jan 2026"
-  },
-  {
-    "t": "India’s power discoms turn profitable after years, post Rs 2,701 crore profit in FY25",
-    "tag": "Positive",
-    "src": "Moneycontrol.com · Jan 2026"
   }
 ]
